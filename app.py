@@ -1,0 +1,423 @@
+import streamlit as st
+import openpyxl
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+st.set_page_config(page_title="Plan de Trabajo SENA", page_icon="🎓", layout="wide")
+st.markdown("""
+<style>
+.main-header{background:linear-gradient(135deg,#006633 0%,#009944 100%);padding:1.5rem 2rem;border-radius:12px;margin-bottom:1.5rem}
+.main-header h1{color:white;margin:0;font-size:1.6rem}
+.main-header p{color:#ccffcc;margin:4px 0 0;font-size:.9rem}
+.section-box{background:#f8fffe;border:1px solid #c8e6c9;border-radius:10px;padding:1.2rem 1.5rem;margin-bottom:1rem}
+.section-title{color:#006633;font-weight:700;font-size:.95rem;margin-bottom:.8rem;text-transform:uppercase;letter-spacing:.05em}
+.chip{display:inline-block;background:#e8f5e9;color:#006633;padding:3px 10px;border-radius:20px;font-size:.78rem;margin:2px;border:1px solid #a5d6a7}
+.proj-card{border:2px solid #c8e6c9;border-radius:10px;padding:1rem;cursor:pointer;transition:.2s;background:white}
+.proj-card:hover{border-color:#006633;background:#f0faf4}
+.proj-card.active{border-color:#006633;background:#e8f5e9}
+.stButton>button{background:#006633;color:white;border:none;border-radius:8px;padding:.6rem 2rem;font-size:1rem;font-weight:600;width:100%}
+.stButton>button:hover{background:#005522}
+</style>
+""", unsafe_allow_html=True)
+
+# ── PLANEACIONES PEDAGÓGICAS ──────────────────────────────────────
+
+PROYECTOS = {
+    "2441890": {
+        "nombre": "FABRICAR ELEMENTOS MECÁNICOS CON TECNOLOGÍA DE CONTROL NUMÉRICO COMPUTARIZADO",
+        "fases": {
+            "INDUCCIÓN": {
+                "Inducción": {"competencias": [{
+                    "nombre": "Resultado de aprendizaje de la inducción",
+                    "resultados": [
+                        {"ra": "Identificar la dinámica organizacional del SENA y el rol de la Formación Profesional Integral de acuerdo con su proyecto de vida y el desarrollo profesional", "actividades": ["Asumir actitudes y valores en los diferentes ámbitos de formación, vida y trabajo.", "Reconocer la identidad institucional y los procedimientos administrativos.", "Incorporar a su proyecto de vida las oportunidades ofrecidas por el SENA."]}
+                    ], "hD": 36, "hI": 12
+                }]}
+            },
+            "ANÁLISIS": {
+                "CARACTERIZAR LA MATERIA PRIMA, HERRAMIENTAS Y EQUIPOS EN EL AJUSTE MANUAL DE LAS PIEZAS.": {"competencias": [{
+                    "nombre": "Pulir piezas industriales de acuerdo con técnicas manuales y mecánicas",
+                    "resultados": [
+                        {"ra": "01 Alistar materia prima e instrumentos de medición teniendo en cuenta normativa ocupacional, ambiental y procedimientos técnicos.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Seleccionar materiales de acuerdo con parámetros técnicos y normativa.", "Trazar y cortar material de acuerdo con planos y normativa ambiental."]},
+                        {"ra": "02 Poner a punto herramientas y equipos de banco para el ajuste manual y mecánico.", "actividades": ["Fundamentar conceptos y principios de trabajo con herramientas de banco.", "Rectificar muelas de afilar teniendo en cuenta procedimientos técnicos.", "Afilar brocas cumpliendo procedimientos técnicos y normas de seguridad."]},
+                        {"ra": "03 Ajustar manual y mecánicamente con herramientas y equipos de banco.", "actividades": ["Fundamentar conceptos y principios de ajustes y tolerancias.", "Aplicar técnicas de limado manual de acuerdo a parámetros establecidos.", "Ejecutar operaciones de roscado manual con macho y terraja."]}
+                    ], "hD": 36, "hI": 12
+                }]},
+                "REALIZAR EL DESPIECE CORRESPONDIENTE A LAS PIEZAS DEL PROYECTO SEGÚN EL DIEDRO APROPIADO.": {"competencias": [{
+                    "nombre": "Dibujar planos mecánicos de acuerdo con normas técnicas",
+                    "resultados": [
+                        {"ra": "01 Dibujar elementos mecánicos de acuerdo con especificaciones técnicas.", "actividades": ["Elaborar planos de acuerdo a las especificaciones técnicas del elemento.", "Dibujar a mano alzada y con instrumentos la geometría del elemento mecánico.", "Generar cortes, secciones y vistas ortogonales o isométricas."]},
+                        {"ra": "Modelar componentes mecánicos en software CAD según especificaciones técnicas.", "actividades": ["Desarrollar ejercicios de modelado de sólidos por medio de las tecnologías CAD.", "Generar modelos digitales de piezas y ensambles mecánicos.", "Parametrizar los modelos digitales según tipo y dimensiones del elemento."]},
+                        {"ra": "Documentar los planos según normas técnicas.", "actividades": ["Elaborar bitácora de los sólidos modelados por medio de las tecnologías CAD.", "Elaborar planos de fabricación y montaje de acuerdo con normas técnicas.", "Organizar archivos físicos y digitales de acuerdo a políticas de la empresa."]}
+                    ], "hD": 36, "hI": 12
+                }]},
+                "CARACTERIZAR EL TORNO Y SUS PROCESOS, PARA EL MECANIZADO DE PIEZAS MECÁNICAS": {"competencias": [{
+                    "nombre": "Mecanizar pieza industrial de acuerdo con técnicas manuales y semiautomáticas",
+                    "resultados": [
+                        {"ra": "Poner a punto materia prima, puesto de trabajo, máquina y herramientas de acuerdo al proceso de torneado convencional.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Seleccionar el material de acuerdo con especificaciones técnicas del plano.", "Patronar las herramientas de acuerdo con el orden operacional de mecanizado."]},
+                        {"ra": "Ejecutar operaciones de torneado convencional de acuerdo con procedimientos técnicos y normativa ambiental.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Ajustar parámetros de mecanizado de acuerdo con el acabado superficial.", "Mecanizar productos metalmecánicos con torno convencional según procedimientos."]},
+                        {"ra": "Mantener el torno convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Aplicar técnicas de lubricación en la máquina teniendo en cuenta la ruta entregada.", "Clasificar y disponer los residuos generados según procedimientos establecidos.", "Reportar fallas y necesidades de mantenimiento según lineamientos de la empresa."]}
+                    ], "hD": 36, "hI": 12
+                }]},
+                "CARACTERIZAR LA FRESADORA Y SUS PROCESOS, PARA EL MECANIZADO DE PIEZAS MECÁNICAS": {"competencias": [{
+                    "nombre": "Mecanizado de piezas en Tornos y Fresadoras Convencionales",
+                    "resultados": [
+                        {"ra": "Alistar materia prima, puesto de trabajo, máquina y herramientas de fresado convencional.", "actividades": ["Identificar los diferentes instrumentos de medición que intervienen en el proceso.", "Ajustar las características dimensionales del producto según especificaciones.", "Revisar la calidad del producto (acabados, tolerancias, dimensiones y geometría)."]},
+                        {"ra": "Mecanizar productos metalmecánicos con fresadora convencional cumpliendo especificaciones técnicas.", "actividades": ["Realizar orden operacional de las piezas a mecanizar con parámetros de corte.", "Fabricar pieza con operaciones básicas de fresado según especificaciones técnicas.", "Fabricar pieza con operaciones propias de cabezal divisor según especificaciones."]},
+                        {"ra": "Mantener la fresadora convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Aplicar técnicas de lubricación en la fresadora según ruta de mantenimiento.", "Almacenar el refrigerante usado de acuerdo con normas medioambientales.", "Informar fallas e inspección de la máquina según lineamientos de la empresa."]}
+                    ], "hD": 48, "hI": 0
+                }]}
+            },
+            "PLANEACIÓN": {
+                "PREPARAR LOS INSUMOS REQUERIDOS PARA LA ELABORACIÓN DE LOS PRODUCTOS METALMECÁNICOS.": {"competencias": [{
+                    "nombre": "Alistar máquina herramienta de control numérico de acuerdo con especificaciones técnicas",
+                    "resultados": [
+                        {"ra": "01 Alistar materia prima del producto según especificaciones técnicas.", "actividades": ["Seleccionar materiales para la fabricación de las piezas metalmecánicas.", "Utilizar técnicamente los instrumentos de medición de acuerdo a la pieza.", "Cortar el material de acuerdo al plano de fabricación y procedimientos técnicos."]}
+                    ], "hD": 36, "hI": 12
+                }]},
+                "PLANEAR EL PROCESO DE FABRICACIÓN, DE ACUERDO CON REQUERIMIENTOS TÉCNICOS.": {"competencias": [{
+                    "nombre": "Alistar máquina herramienta CNC de acuerdo con especificaciones técnicas",
+                    "resultados": [
+                        {"ra": "02 Alistar maquinaria de Control Numérico Computarizado y herramientas de acuerdo al proceso de mecanizado.", "actividades": ["Fundamentar conceptos y principios de los tratamientos térmicos y durezas.", "Verificar estado de la máquina CNC de acuerdo al proceso a realizar.", "Ajustar parámetros de mecanizado en la máquina herramienta CNC."]}
+                    ], "hD": 36, "hI": 12
+                }]},
+                "DESARROLLAR LOS PROTOTIPOS REQUERIDOS PARA EL PROCESO DE MECANIZADO.": {"competencias": [{
+                    "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+                    "resultados": [
+                        {"ra": "Modelar prototipos teniendo en cuenta las especificaciones técnicas y requerimientos del cliente.", "actividades": ["Desarrollar prototipos del proyecto de Formación en software CAD.", "Generar plano técnico de las piezas según las especificaciones del producto.", "Verificar en el simulador el programa del torno y fresadora según geometría."]}
+                    ], "hD": 216, "hI": 72
+                }]},
+                "CREAR LAS RUTAS Y SECUENCIAS DE MECANIZADO PARA LAS MAQUINAS HERRAMIENTAS DE CONTROL NUMÉRICO.": {"competencias": [{
+                    "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+                    "resultados": [
+                        {"ra": "Generar rutas de mecanizado para Tornos de Control Numérico Computarizado.", "actividades": ["Programar tornos CNC de acuerdo con procedimientos técnicos.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza.", "Documentar los programas del torno de acuerdo a procedimientos de mecanizado."]},
+                        {"ra": "Generar rutas de mecanizado para Fresadoras de Control Numérico Computarizado.", "actividades": ["Programar fresadoras CNC de acuerdo con procedimientos técnicos.", "Establecer coordenadas en la fresadora de acuerdo a geometría de la pieza.", "Optimizar en el simulador el programa de la fresadora según geometría."]},
+                        {"ra": "Generar rutas de mecanizado para Centros de Mecanizado CNC.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Simular el programa de la pieza a fabricar según el control de la máquina.", "Mecanizar la pieza en las máquinas CNC cumpliendo especificaciones técnicas."]}
+                    ], "hD": 36, "hI": 12
+                }]}
+            },
+            "EJECUCIÓN Y EVALUACIÓN": {
+                "PRODUCIR EL MECANIZADO DE LAS PIEZAS EN MAQUINAS HERRAMIENTAS CNC.": {"competencias": [{
+                    "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+                    "resultados": [
+                        {"ra": "Fabricar piezas en Centros de Mecanizado de control numérico computarizado.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Establecer coordenadas en los centros de mecanizado según geometría.", "Verificar que el proceso y producto final cumplan requerimientos técnicos."]},
+                        {"ra": "Fabricar piezas en Torno de control numérico computarizado.", "actividades": ["Elaborar piezas requeridas en el Proyecto de Formación con torno CNC.", "Ajustar parámetros del torno de acuerdo con el acabado superficial.", "Revisar la calidad del producto torneado según planos entregados."]},
+                        {"ra": "Fabricar piezas en Fresadora de control numérico computarizado.", "actividades": ["Manejar software CAD-CAM para generar las rutas de mecanizado en fresadora.", "Fresar con diferentes técnicas teniendo en cuenta la geometría de la pieza.", "Determinar parámetros de corte según especificaciones de tolerancias y acabados."]}
+                    ], "hD": 180, "hI": 60
+                }]},
+                "GESTIONAR LA PRODUCCIÓN EN ATENCIÓN A LOS REQUERIMIENTOS TÉCNICOS.": {"competencias": [{
+                    "nombre": "Programar la producción según métodos y parámetros técnicos",
+                    "resultados": [
+                        {"ra": "Organizar proceso productivo de acuerdo a órdenes de fabricación, tiempos, mano de obra y materiales.", "actividades": ["Programar producción de acuerdo con estándares de fabricación.", "Diseñar cronogramas de fabricación dependiendo del proceso de mecanizado.", "Elaborar diagramas de Gantt y listas de chequeo según programa de producción."]},
+                        {"ra": "Diseñar programa de producción de piezas metalmecánicas según requerimientos y estándares.", "actividades": ["Elaborar el control estadístico y de calidad de las piezas fabricadas.", "Elaborar informe de producción de acuerdo con el tiempo estándar establecido.", "Calcular la capacidad de trabajo de las máquinas de mecanizado."]}
+                    ], "hD": 108, "hI": 36
+                }]}
+            }
+        }
+    },
+    "3343700": {
+        "nombre": "FABRICACIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CNC PARA EL SECTOR INDUSTRIAL DEL ATLÁNTICO",
+        "fases": {
+            "IDENTIFICACIÓN": {
+                "DETERMINAR LAS ESPECIFICACIONES TÉCNICAS DEL PROCESO DE FABRICACIÓN DE UN COMPONENTE MECÁNICO.": {"competencias": [
+                    {
+                        "nombre": "290201212 - ALISTAMIENTO DE MATERIA PRIMA, ACCESORIOS Y PLAN DE PRODUCCIÓN PARA MAQUINAS HERRAMIENTAS CNC",
+                        "resultados": [
+                            {"ra": "01. Alistar materia prima del producto según especificaciones técnicas.", "actividades": ["Identificar el tipo de material a mecanizar teniendo en cuenta sus propiedades y características.", "Seleccionar y cortar el material de acuerdo al plano de fabricación.", "Cumplir normas medioambientales, de seguridad y salud ocupacional en el alistamiento."]},
+                            {"ra": "02. Alistar maquinaria de control numérico computarizado y herramientas de acuerdo al proceso de mecanizado.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Verificar estado de la máquina de acuerdo al proceso a realizar.", "Ajustar herramienta de corte teniendo en cuenta el proceso de mecanizado."]}
+                        ], "hD": 36, "hI": 12
+                    },
+                    {
+                        "nombre": "290201190 - ELABORACIÓN DE PLANOS MECÁNICOS DE ACUERDO CON NORMAS TÉCNICAS",
+                        "resultados": [
+                            {"ra": "02. Documentar los planos según normas técnicas.", "actividades": ["Elaborar bitácora de los sólidos modelados por medio de las tecnologías CAD.", "Elaborar planos de fabricación y montaje según normas técnicas de dibujo mecánico.", "Organizar técnicamente los archivos físicos y digitales."]},
+                            {"ra": "03. Dibujar elementos mecánicos de acuerdo con especificaciones técnicas.", "actividades": ["Elaborar planos de acuerdo a las especificaciones técnicas del elemento a fabricar.", "Dibujar a mano alzada y con instrumentos la geometría del elemento mecánico.", "Generar cortes, secciones y vistas ortogonales o isométricas."]}
+                        ], "hD": 36, "hI": 12
+                    },
+                    {
+                        "nombre": "290201210 - PULIR PIEZAS INDUSTRIALES DE ACUERDO CON TÉCNICAS MANUALES Y MECÁNICAS",
+                        "resultados": [
+                            {"ra": "01. Alistar materia prima e instrumentos de medición teniendo en cuenta normativa ocupacional, ambiental y procedimientos técnicos.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Identificar y clasificar instrumentos de medición dimensional.", "Convertir unidades entre sistemas de medición."]}
+                        ], "hD": 36, "hI": 12
+                    }
+                ]}
+            },
+            "ALISTAMIENTO": {
+                "DEFINIR LA SECUENCIA OPERACIONAL PARA LA FABRICACIÓN DE UN COMPONENTE MECÁNICO.": {"competencias": [
+                    {
+                        "nombre": "290201190 - ELABORACIÓN DE PLANOS MECÁNICOS DE ACUERDO CON NORMAS TÉCNICAS",
+                        "resultados": [
+                            {"ra": "01. Modelar componentes mecánicos en software asistido por computador (CAD) según especificaciones técnicas.", "actividades": ["Desarrollar de ejercicios de modelado de sólidos por medio de las tecnologías CAD.", "Generar modelos digitales de piezas y ensambles mecánicos según especificaciones.", "Parametrizar los modelos digitales según tipo y dimensiones del elemento mecánico."]}
+                        ], "hD": 36, "hI": 12
+                    },
+                    {
+                        "nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+                        "resultados": [
+                            {"ra": "03. Modelar prototipos teniendo en cuenta las especificaciones técnicas y requerimientos del cliente.", "actividades": ["Desarrollar prototipos del proyecto de Formación en software CAD.", "Generar plano técnico de las piezas según las especificaciones del producto.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza."]}
+                        ], "hD": 216, "hI": 72
+                    },
+                    {
+                        "nombre": "220601048 - PROGRAMACIÓN DE LA PRODUCCIÓN PARA LA FABRICACIÓN DE PRODUCTOS MECANIZADOS",
+                        "resultados": [
+                            {"ra": "01. Organizar proceso productivo de acuerdo a órdenes de fabricación, tiempos, mano de obra y materiales requeridos.", "actividades": ["Programar producción de acuerdo con estándares de fabricación.", "Diseñar cronogramas de fabricación dependiendo del proceso de mecanizado.", "Elaborar histogramas, diagramas de Gantt y listas de chequeo según programa de producción."]},
+                            {"ra": "02. Diseñar programa de producción de piezas metalmecánicas según requerimientos y estándares de producción establecidos.", "actividades": ["Elaborar el control estadístico y de calidad de las piezas fabricadas.", "Calcular la capacidad de trabajo de las máquinas de mecanizado.", "Identificar los puntos críticos de control del proceso productivo."]}
+                        ], "hD": 108, "hI": 36
+                    }
+                ]},
+                "PREPARAR EL ÁREA DE TRABAJO Y LOS INSUMOS PARA LA FABRICACIÓN DE COMPONENTES MECÁNICOS.": {"competencias": [
+                    {
+                        "nombre": "290201210 - PULIR PIEZAS INDUSTRIALES DE ACUERDO CON TÉCNICAS MANUALES Y MECÁNICAS",
+                        "resultados": [
+                            {"ra": "03. Poner a punto herramientas y equipos de banco para el ajuste manual y mecánico.", "actividades": ["Fundamentar conceptos y principios de trabajo con herramientas de banco.", "Afilar herramientas de corte teniendo en cuenta el tipo de trabajo.", "Lubricar herramientas y equipos de banco según procedimientos técnicos."]},
+                            {"ra": "02. Ajustar manual y mecánicamente con herramientas y equipos de banco.", "actividades": ["Fundamentar conceptos y principios de ajustes y tolerancias.", "Aplicar técnicas de limado manual de acuerdo a parámetros establecidos.", "Ejecutar operaciones de roscado manual con macho y terraja."]}
+                        ], "hD": 36, "hI": 12
+                    },
+                    {
+                        "nombre": "290201211 - MECANIZADO DE PIEZAS EN TORNOS Y FRESADORAS CONVENCIONALES",
+                        "resultados": [
+                            {"ra": "02. Alistar materia prima, puesto de trabajo máquina y herramientas de fresado convencional.", "actividades": ["Identificar conceptos y principios de metrología con máquinas de medición por coordenadas.", "Establecer e interpretar secuencias de fabricación para el mecanizado en fresadora.", "Seleccionar herramientas de corte a utilizar en los procesos de fresado."]},
+                            {"ra": "04. Mantener la fresadora convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Mecanizar piezas en máquinas fresadora convencional.", "Aplicar técnicas de lubricación en la fresadora según ruta de mantenimiento.", "Informar fallas e inspección de la máquina según lineamientos de la empresa."]},
+                            {"ra": "05. Poner a punto materia prima, puesto de trabajo, máquina y herramientas de acuerdo al proceso de torneado convencional.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos, digitales y automáticos.", "Interpretar secuencias de fabricación o ruta de trabajo en tornos paralelos.", "Seleccionar materiales y herramientas de corte para el torneado."]},
+                            {"ra": "06. Mantener el torno convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Aplicar técnicas de lubricación en la máquina teniendo en cuenta la ruta entregada.", "Clasificar y disponer los residuos generados según procedimientos establecidos."]}
+                        ], "hD": 36, "hI": 12
+                    }
+                ]}
+            },
+            "FABRICACIÓN": {
+                "PRODUCIR COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CONVENCIONALES.": {"competencias": [
+                    {
+                        "nombre": "290201211 - MECANIZADO DE PIEZAS EN TORNOS Y FRESADORAS CONVENCIONALES",
+                        "resultados": [
+                            {"ra": "03. Ejecutar operaciones de torneado convencional de acuerdo con procedimientos técnicos y normativa ambiental.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Ajustar parámetros de mecanizado de acuerdo con el acabado superficial.", "Mecanizar productos metalmecánicos con torno convencional según procedimientos."]},
+                            {"ra": "01. Mecanizar productos metalmecánicos con fresadora convencional cumpliendo especificaciones técnicas.", "actividades": ["Mecanizar piezas en máquinas fresadora convencional.", "Ajustar los parámetros de mecanizado de acuerdo con el acabado superficial.", "Revisar la calidad del producto (acabados, tolerancias, dimensiones y geometría)."]}
+                        ], "hD": 72, "hI": 24
+                    }
+                ]},
+                "PRODUCIR COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CNC": {"competencias": [
+                    {
+                        "nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+                        "resultados": [
+                            {"ra": "04. Generar rutas de mecanizado para Tornos de Control Numérico Computarizado.", "actividades": ["Programar tornos, fresadoras y centros de mecanizado CNC.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza.", "Documentar los programas del torno de acuerdo a procedimientos de mecanizado."]},
+                            {"ra": "02. Generar rutas de mecanizado para Fresadoras de Control Numérico Computarizado.", "actividades": ["Programar fresadoras CNC de acuerdo con procedimientos técnicos.", "Optimizar en el simulador el programa de la fresadora según geometría.", "Determinar parámetros de mecanizado para la fresadora CNC."]},
+                            {"ra": "07. Generar rutas de mecanizado para Centros de Mecanizado de Control Numérico Computarizado.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Simular el programa de los centros de mecanizado CNC.", "Mecanizar la pieza en las máquinas CNC cumpliendo especificaciones técnicas."]},
+                            {"ra": "06. Fabricar piezas en Centros de Mecanizado de control numérico computarizado.", "actividades": ["Programar tornos, fresadoras y centros de mecanizado CNC con ayuda de software CAM.", "Verificar que el proceso y producto final cumplan requerimientos técnicos.", "Controlar las dimensiones del producto en el mecanizado CNC."]},
+                            {"ra": "01. Fabricar piezas en Torno de control numérico computarizado.", "actividades": ["Elaborar piezas requeridas en el Proyecto de Formación con torno CNC.", "Ajustar parámetros del torno de acuerdo con el acabado superficial.", "Revisar la calidad del producto torneado según planos entregados."]},
+                            {"ra": "05. Fabricar piezas en Fresadora de control numérico computarizado.", "actividades": ["Manejar software CAD-CAM para generar las rutas de mecanizado en fresadora.", "Fresar con diferentes técnicas teniendo en cuenta la geometría de la pieza.", "Determinar parámetros de corte según especificaciones de tolerancias y acabados."]}
+                        ], "hD": 180, "hI": 60
+                    }
+                ]},
+                "VERIFICAR LA PRODUCCIÓN DE LOS COMPONENTES MECÁNICOS CON ESTÁNDARES DE CALIDAD.": {"competencias": [
+                    {
+                        "nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+                        "resultados": [
+                            {"ra": "06. Fabricar piezas en Centros de Mecanizado de control numérico computarizado (verificación calidad).", "actividades": ["Verificar que el proceso y producto final cumplan requerimientos técnicos.", "Controlar las dimensiones durante el proceso, cumpliendo requerimientos del plano.", "Elaborar informe de producción de acuerdo con el tiempo estándar establecido."]}
+                        ], "hD": 180, "hI": 60
+                    }
+                ]}
+            },
+            "MEJORAMIENTO": {
+                "Ensamblar los componentes mecánicos fabricados aplicando estrategias de solución": {"competencias": [{
+                    "nombre": "RESULTADOS DE APRENDIZAJE ETAPA PRÁCTICA",
+                    "resultados": [
+                        {"ra": "Aplicar en la resolución de problemas reales del sector productivo los conocimientos, habilidades y destrezas pertinentes a las competencias del programa de formación.", "actividades": ["Aplicar estrategias y metodologías de autogestión en el sector productivo.", "Resolver problemas reales integrando las competencias adquiridas durante la formación.", "Presentar informe de actividades realizadas en la etapa productiva."]}
+                    ], "hD": 0, "hI": 0
+                }]}
+            }
+        }
+    }
+}
+
+# ── PDF ───────────────────────────────────────────────────────────
+SENA_GREEN  = colors.HexColor('#006633')
+LIGHT_GREEN = colors.HexColor('#E8F5E9')
+GRAY_BORDER = colors.HexColor('#AAAAAA')
+BLACK       = colors.black
+
+def get_styles():
+    return {
+        'label':  ParagraphStyle('label',  fontName='Helvetica-Bold', fontSize=8,   alignment=TA_LEFT,   leading=10),
+        'value':  ParagraphStyle('value',  fontName='Helvetica',      fontSize=8,   alignment=TA_LEFT,   leading=10),
+        'cell':   ParagraphStyle('cell',   fontName='Helvetica',      fontSize=7.5, alignment=TA_LEFT,   leading=10),
+        'cell_c': ParagraphStyle('cell_c', fontName='Helvetica',      fontSize=7.5, alignment=TA_CENTER, leading=10),
+        'header': ParagraphStyle('header', fontName='Helvetica-Bold', fontSize=7.5, alignment=TA_CENTER, leading=10),
+    }
+
+def build_page(aprendiz, resultados_sel, datos, styles):
+    ra_texto = "\n\n".join([r["ra"] for r in resultados_sel])
+    actividades_todas = []
+    for r in resultados_sel:
+        actividades_todas.extend(r["actividades"])
+
+    logo = Paragraph("<b>SENA</b>", ParagraphStyle('lg', fontName='Helvetica-Bold', fontSize=16, alignment=TA_CENTER, textColor=SENA_GREEN))
+    header = Table([[logo,
+        Paragraph("<b>SERVICIO NACIONAL DE APRENDIZAJE SENA</b><br/><b>CENTRO NACIONAL COLOMBO ALEMAN</b><br/>PLAN DE TRABAJO",
+                  ParagraphStyle('hd', fontName='Helvetica', fontSize=9, alignment=TA_CENTER, leading=13)),
+        Paragraph("V2.0", ParagraphStyle('v', fontName='Helvetica', fontSize=7, alignment=TA_LEFT, textColor=colors.gray))
+    ]], colWidths=[2.5*cm, 13.5*cm, 1.5*cm])
+    header.setStyle(TableStyle([('BOX',(0,0),(-1,-1),1,BLACK),('GRID',(0,0),(-1,-1),.5,GRAY_BORDER),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6)]))
+
+    f1 = Table([[Paragraph("<b>Programa de\nFormación:</b>",styles['label']),Paragraph(datos['programa'],styles['value']),Paragraph("<b>Instructor:</b>",styles['label']),Paragraph(datos['instructor'],styles['value'])]], colWidths=[2.2*cm,8.3*cm,2*cm,5*cm])
+    f1.setStyle(TableStyle([('BOX',(0,0),(-1,-1),.5,BLACK),('GRID',(0,0),(-1,-1),.5,GRAY_BORDER),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('BACKGROUND',(0,0),(0,0),LIGHT_GREEN),('BACKGROUND',(2,0),(2,0),LIGHT_GREEN),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),('LEFTPADDING',(0,0),(-1,-1),4)]))
+
+    f2 = Table([[Paragraph("<b>Número de\nFicha:</b>",styles['label']),Paragraph(datos['ficha'],styles['value']),Paragraph("<b>Proyecto\nFormativo:</b>",styles['label']),Paragraph(datos['proyecto'],styles['value']),Paragraph("<b>Fase del\nProyecto:</b>",styles['label']),Paragraph(datos['fase'],styles['value'])]], colWidths=[1.8*cm,1.8*cm,2*cm,7*cm,1.8*cm,3.1*cm])
+    f2.setStyle(TableStyle([('BOX',(0,0),(-1,-1),.5,BLACK),('GRID',(0,0),(-1,-1),.5,GRAY_BORDER),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('BACKGROUND',(0,0),(0,0),LIGHT_GREEN),('BACKGROUND',(2,0),(2,0),LIGHT_GREEN),('BACKGROUND',(4,0),(4,0),LIGHT_GREEN),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),('LEFTPADDING',(0,0),(-1,-1),4)]))
+
+    f3 = Table([
+        [Paragraph("<b>Nombre del\nAprendiz:</b>",styles['label']),Paragraph(aprendiz['nombre'],styles['value']),Paragraph("<b>Observaciones:</b>",styles['label']),Paragraph(datos.get('observaciones',''),styles['value'])],
+        [Paragraph("<b>Documento\nde Identidad:</b>",styles['label']),Paragraph(aprendiz['doc'],styles['value']),'',''],
+    ], colWidths=[2.2*cm,6.3*cm,2.5*cm,6.5*cm])
+    f3.setStyle(TableStyle([('BOX',(0,0),(-1,-1),.5,BLACK),('GRID',(0,0),(-1,-1),.5,GRAY_BORDER),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('BACKGROUND',(0,0),(0,1),LIGHT_GREEN),('BACKGROUND',(2,0),(2,0),LIGHT_GREEN),('SPAN',(2,0),(3,1)),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),('LEFTPADDING',(0,0),(-1,-1),4)]))
+
+    desc_title = Table([[Paragraph("<b>DESCRIPTORES PARA EL DESARROLLO DE LA RUTA DE APRENDIZAJE</b>",ParagraphStyle('dt',fontName='Helvetica-Bold',fontSize=9,alignment=TA_CENTER))]], colWidths=[17.5*cm])
+    desc_title.setStyle(TableStyle([('BOX',(0,0),(-1,-1),.5,BLACK),('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4)]))
+
+    h = styles['header']
+    num_rows = max(len(actividades_todas), 5)
+    col_w = [5*cm,1.2*cm,5.5*cm,1.1*cm,1.1*cm,1.5*cm,1.5*cm,1.3*cm,1.3*cm]
+    table_data = [
+        [Paragraph("<b>Resultados de Aprendizaje</b>",h),Paragraph("<b>N°\nActividad</b>",h),Paragraph("<b>Actividades a desarrollar</b>",h),Paragraph("<b>Forma de\nEntrega de\nactividad</b>",h),'',Paragraph("<b>Fecha de entrega</b>",h),'',Paragraph("<b>¿Entrego la\nActividad?</b>",h),''],
+        ['','','',Paragraph("<b>Física</b>",h),Paragraph("<b>Digital</b>",h),Paragraph("<b>Concertada</b>",h),Paragraph("<b>Final</b>",h),Paragraph("<b>SI</b>",h),Paragraph("<b>NO</b>",h)],
+    ]
+    for i in range(num_rows):
+        act = actividades_todas[i] if i < len(actividades_todas) else ""
+        table_data.append([Paragraph(ra_texto,styles['cell']) if i==0 else '',Paragraph(str(i+1),styles['cell_c']),Paragraph(act,styles['cell']),'','','','','',''])
+
+    desc_table = Table(table_data, colWidths=col_w, rowHeights=[None,None]+[1.5*cm]*num_rows)
+    desc_table.setStyle(TableStyle([('BOX',(0,0),(-1,-1),.5,BLACK),('GRID',(0,0),(-1,-1),.5,GRAY_BORDER),('VALIGN',(0,0),(-1,-1),'MIDDLE'),('ALIGN',(0,0),(-1,-1),'CENTER'),('ALIGN',(0,2),(0,-1),'LEFT'),('ALIGN',(2,2),(2,-1),'LEFT'),('LEFTPADDING',(0,0),(-1,-1),3),('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),('SPAN',(3,0),(4,0)),('SPAN',(5,0),(6,0)),('SPAN',(7,0),(8,0)),('SPAN',(0,2),(0,1+num_rows)),('BACKGROUND',(0,0),(-1,1),LIGHT_GREEN),('FONTNAME',(0,0),(-1,1),'Helvetica-Bold')]))
+    return [header,Spacer(1,3),f1,f2,f3,Spacer(1,4),desc_title,desc_table]
+
+def generar_pdf_bytes(aprendices, resultados_sel, datos):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, rightMargin=1.2*cm, leftMargin=1.2*cm, topMargin=1.2*cm, bottomMargin=1.2*cm)
+    styles = get_styles()
+    story = []
+    for i, ap in enumerate(aprendices):
+        story.extend(build_page(ap, resultados_sel, datos, styles))
+        if i < len(aprendices)-1:
+            story.append(PageBreak())
+    doc.build(story)
+    buf.seek(0)
+    return buf.getvalue()
+
+def leer_aprendices(file):
+    wb = openpyxl.load_workbook(file, data_only=True)
+    ws = wb.active
+    aprendices = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row[0]: continue
+        tipo = str(row[1] or 'CC').strip()
+        num  = str(row[2] or '').strip()
+        nom  = str(row[3] or '').strip()
+        ape  = str(row[4] or '').strip()
+        nombre = f"{nom} {ape}".strip()
+        if nombre:
+            aprendices.append({'nombre': nombre, 'doc': f"{tipo} {num}".strip()})
+    return aprendices
+
+# ── INTERFAZ ──────────────────────────────────────────────────────
+st.markdown("""<div class="main-header"><h1>🎓 Generador de Plan de Trabajo SENA</h1><p>Producción de Componentes Mecánicos con Máquinas CNC · Cód. 821100 v1 · Centro Colombo Alemán</p></div>""", unsafe_allow_html=True)
+
+# PASO 0: Selección de proyecto
+st.markdown('<div class="section-box">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">🗂️ Selecciona el proyecto formativo</div>', unsafe_allow_html=True)
+proyecto_cod = st.radio("Proyecto", list(PROYECTOS.keys()),
+    format_func=lambda k: f"📋 {k} — {PROYECTOS[k]['nombre'][:80]}...",
+    horizontal=False, label_visibility="collapsed")
+st.markdown('</div>', unsafe_allow_html=True)
+
+proyecto_data = PROYECTOS[proyecto_cod]
+fases_data = proyecto_data["fases"]
+
+col1, col2 = st.columns([1,1], gap="large")
+
+with col1:
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📋 1. Lista de aprendices</div>', unsafe_allow_html=True)
+    archivo = st.file_uploader("Cargar archivo Excel (.xlsx)", type=["xlsx","xls"], label_visibility="collapsed")
+    aprendices = []
+    if archivo:
+        aprendices = leer_aprendices(archivo)
+        st.success(f"✅ {len(aprendices)} aprendices cargados")
+        chips = "".join([f'<span class="chip">{a["nombre"].split()[0]} {a["nombre"].split()[-1]}</span>' for a in aprendices[:8]])
+        if len(aprendices) > 8: chips += f'<span class="chip">+{len(aprendices)-8} más</span>'
+        st.markdown(chips, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👤 2. Instructor y grupo</div>', unsafe_allow_html=True)
+    instructor = st.text_input("Nombre del instructor", placeholder="Nombres y apellidos completos")
+    ficha      = st.text_input("Número de ficha", placeholder="Ej. 2441890")
+    proyecto_txt = st.text_input("Proyecto formativo", value=proyecto_data["nombre"])
+    observaciones = st.text_area("Observaciones (opcional)", height=68)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📚 3. Fase, actividad y competencia</div>', unsafe_allow_html=True)
+    fase = st.selectbox("Fase del proyecto", [""] + list(fases_data.keys()))
+    actividad_sel = ""
+    competencia_sel = None
+    if fase:
+        acts = list(fases_data[fase].keys())
+        actividad_sel = st.selectbox("Actividad de proyecto", [""] + acts, format_func=lambda x: (x[:65]+"...") if len(x)>65 else x)
+    if fase and actividad_sel:
+        comps = fases_data[fase][actividad_sel]["competencias"]
+        nombres_comp = [c["nombre"] for c in comps]
+        comp_nombre = st.selectbox("Competencia", nombres_comp, format_func=lambda x: (x[:72]+"...") if len(x)>72 else x)
+        competencia_sel = next(c for c in comps if c["nombre"] == comp_nombre)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    resultados_sel = []
+    if competencia_sel:
+        st.markdown('<div class="section-box">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">✅ 4. Resultados de aprendizaje</div>', unsafe_allow_html=True)
+        st.caption("Selecciona uno o más resultados. Sus actividades se combinarán en el PDF.")
+        for i, r in enumerate(competencia_sel["resultados"]):
+            checked = st.checkbox(r["ra"], key=f"ra_{proyecto_cod}_{fase}_{i}")
+            if checked:
+                resultados_sel.append(r)
+                with st.expander(f"📝 Actividades del resultado {i+1}", expanded=True):
+                    for j, act in enumerate(r["actividades"]):
+                        st.markdown(f"**{j+1}.** {act}")
+        if resultados_sel:
+            total_acts = sum(len(r["actividades"]) for r in resultados_sel)
+            st.info(f"✅ {len(resultados_sel)} resultado(s) → {total_acts} actividades en el PDF")
+        st.markdown('</div>', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        c1.metric("Horas trabajo directo", competencia_sel["hD"])
+        c2.metric("Horas trabajo independiente", competencia_sel["hI"])
+
+# ── GENERAR ───────────────────────────────────────────────────────
+st.divider()
+col_btn, col_info = st.columns([2,3])
+with col_info:
+    if not archivo: st.info("⬆️ Carga la lista de aprendices para continuar.")
+    elif not instructor or not ficha: st.warning("Completa el nombre del instructor y número de ficha.")
+    elif not fase or not actividad_sel: st.warning("Selecciona la fase y actividad del proyecto.")
+    elif not resultados_sel: st.warning("Selecciona al menos un resultado de aprendizaje.")
+    else:
+        total_acts = sum(len(r["actividades"]) for r in resultados_sel)
+        st.success(f"✅ Listo para generar {len(aprendices)} PDFs · {len(resultados_sel)} resultado(s) · {total_acts} actividades")
+with col_btn:
+    generar = st.button("🖨️ Generar PDFs para todos los aprendices")
+
+if generar:
+    errores = []
+    if not archivo: errores.append("Carga la lista de aprendices.")
+    if not instructor: errores.append("Escribe el nombre del instructor.")
+    if not ficha: errores.append("Escribe el número de ficha.")
+    if not fase or not actividad_sel: errores.append("Selecciona fase y actividad.")
+    if not resultados_sel: errores.append("Selecciona al menos un resultado de aprendizaje.")
+    if errores:
+        for e in errores: st.error(e)
+    else:
+        with st.spinner(f"Generando {len(aprendices)} documentos..."):
+            datos = {'programa': "PRODUCCIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO", 'instructor': instructor.upper(), 'ficha': ficha, 'proyecto': proyecto_txt.upper(), 'fase': fase, 'observaciones': observaciones}
+            pdf_bytes = generar_pdf_bytes(aprendices, resultados_sel, datos)
+        st.success(f"✅ PDF generado con {len(aprendices)} páginas")
+        st.download_button(label=f"⬇️ Descargar Plan_Trabajo_Ficha_{ficha}.pdf", data=pdf_bytes, file_name=f"Plan_Trabajo_Ficha_{ficha}.pdf", mime="application/pdf", use_container_width=True)
