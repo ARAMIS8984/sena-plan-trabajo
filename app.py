@@ -1,0 +1,3278 @@
+import streamlit as st
+import openpyxl
+import base64
+from io import BytesIO
+from datetime import date
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import os
+
+st.set_page_config(page_title="Plan Concertado SENA", page_icon="🟢", layout="wide")
+
+# ── LOGO EN BASE64 para web ───────────────────────────────────────
+def get_logo_b64():
+    for path in [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_sena.png"),
+        "logo_sena.png",
+    ]:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode()
+    return ""
+
+logo_b64 = get_logo_b64()
+logo_html = (f'<img src="data:image/png;base64,{logo_b64}" '
+             f'style="height:64px;background:white;border-radius:6px;padding:4px;">')  if logo_b64 else \
+            '<span style="font-weight:900;font-size:1.4rem;background:white;color:#006633;padding:6px 10px;border-radius:6px;">SENA</span>'
+
+st.markdown(f"""
+<style>
+[data-testid="stAppViewContainer"]{{background-color:#0a1628;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'%3E%3Cdefs%3E%3CradialGradient id='g1' cx='25%25' cy='40%25' r='50%25'%3E%3Cstop offset='0%25' stop-color='%23006633' stop-opacity='0.35'/%3E%3Cstop offset='100%25' stop-color='transparent'/%3E%3C/radialGradient%3E%3CradialGradient id='g2' cx='75%25' cy='70%25' r='45%25'%3E%3Cstop offset='0%25' stop-color='%23003d1f' stop-opacity='0.4'/%3E%3Cstop offset='100%25' stop-color='transparent'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1200' height='800' fill='%230a1628'/%3E%3Crect width='1200' height='800' fill='url(%23g1)'/%3E%3Crect width='1200' height='800' fill='url(%23g2)'/%3E%3Cg opacity='0.05' stroke='%2300ff88' stroke-width='0.5'%3E%3Cline x1='0' y1='200' x2='1200' y2='200'/%3E%3Cline x1='0' y1='400' x2='1200' y2='400'/%3E%3Cline x1='0' y1='600' x2='1200' y2='600'/%3E%3Cline x1='300' y1='0' x2='300' y2='800'/%3E%3Cline x1='600' y1='0' x2='600' y2='800'/%3E%3Cline x1='900' y1='0' x2='900' y2='800'/%3E%3C/g%3E%3C/svg%3E");background-size:cover;background-attachment:fixed;}}
+[data-testid="stHeader"]{{background:rgba(10,22,40,0.95)!important;backdrop-filter:blur(10px);border-bottom:1px solid rgba(0,153,68,0.2);}}
+[data-testid="block-container"]{{padding-top:1.5rem!important;}}
+[data-testid="stMarkdown"] p,[data-testid="stMarkdown"] label,.stRadio label,.stCheckbox label,[data-testid="stWidgetLabel"],[data-testid="stCaptionContainer"] p{{color:#c8e6c9!important;}}
+.main-header{{background:linear-gradient(135deg,rgba(0,77,38,0.95) 0%,rgba(0,120,60,0.95) 100%);padding:1.4rem 2rem;border-radius:16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.5rem;border:1px solid rgba(0,200,100,0.3);box-shadow:0 8px 32px rgba(0,0,0,0.4);backdrop-filter:blur(12px);}}
+.main-header-text h1{{color:white;margin:0;font-size:2rem;line-height:1.2;font-weight:700}}
+.main-header-text p{{color:#a5d6a7;margin:6px 0 0;font-size:.9rem}}
+.section-box{{background:rgba(255,255,255,0.05);border:1px solid rgba(0,200,100,0.2);border-radius:16px;padding:1.3rem 1.6rem;margin-bottom:1rem;box-shadow:0 8px 32px rgba(0,0,0,0.3);backdrop-filter:blur(12px);}}
+.section-title{{color:#4caf50;font-weight:700;font-size:.82rem;margin-bottom:.8rem;text-transform:uppercase;letter-spacing:.08em;}}
+.chip{{display:inline-block;background:rgba(0,153,68,0.25);color:#a5d6a7;padding:3px 10px;border-radius:20px;font-size:.78rem;margin:2px;border:1px solid rgba(0,200,100,0.3);}}
+.stButton>button{{background:linear-gradient(135deg,#006633,#009944)!important;color:white!important;border:1px solid rgba(0,200,100,0.4)!important;border-radius:10px!important;font-size:1rem!important;font-weight:600!important;box-shadow:0 4px 20px rgba(0,100,50,0.4)!important;}}
+.stButton>button:hover{{background:linear-gradient(135deg,#005522,#007733)!important;box-shadow:0 6px 24px rgba(0,150,70,0.5)!important;}}
+[data-testid="stTextInput"] input,[data-testid="stTextArea"] textarea{{background:rgba(255,255,255,0.07)!important;border:1px solid rgba(0,200,100,0.25)!important;border-radius:8px!important;color:#10941a!important;caret-color:#10941a!important;}}
+[data-baseweb="select"]>div{{background:rgba(255,255,255,0.07)!important;border:1px solid rgba(0,200,100,0.25)!important;border-radius:8px!important;color:#10941a!important;caret-color:#10941a!important;}}
+hr{{border-color:rgba(0,200,100,0.15)!important;}}
+</style>
+<div class="main-header">
+  <div>{logo_html}</div>
+  <div class="main-header-text">
+    <h1>Plan Concertado</h1>
+    <p>Servicio Nacional de Aprendizaje SENA · Centro Nacional Colombo Alemán</p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════════════
+# CATÁLOGO DE PROGRAMAS — agrega aquí nuevos programas fácilmente
+# ════════════════════════════════════════════════════════════════
+CATALOGO = {
+
+  # ── PROGRAMA 1 ─────────────────────────────────────────────────
+  "821100 - PRODUCCIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS CNC": {
+    "proyectos": {
+
+      "2441890 - FABRICAR ELEMENTOS MECÁNICOS CON TECNOLOGÍA DE CONTROL NUMERICO COMPUTARIZADO": {
+        "nombre_completo": "2441890 - FABRICAR ELEMENTOS MECÁNICOS CON TECNOLOGÍA DE CONTROL NUMERICO COMPUTARIZADO",
+        "fases": {
+          "INDUCCIÓN": {
+            "Inducción": {"competencias": [{
+              "nombre": "Resultado de aprendizaje de la inducción",
+              "resultados": [
+                {"ra": "Identificar la dinámica organizacional del SENA y el rol de la Formación Profesional Integral de acuerdo con su proyecto de vida y el desarrollo profesional",
+                 "actividades": ["Asumir actitudes y valores en los diferentes ámbitos de formación, vida y trabajo.", "Reconocer la identidad institucional y los procedimientos administrativos.", "Incorporar a su proyecto de vida las oportunidades ofrecidas por el SENA."]}
+              ], "hD": 36, "hI": 12
+            }]}
+          },
+          "ANÁLISIS": {
+            "CARACTERIZAR LA MATERIA PRIMA, HERRAMIENTAS Y EQUIPOS EN EL AJUSTE MANUAL DE LAS PIEZAS.": {"competencias": [{
+              "nombre": "Pulir piezas industriales de acuerdo con técnicas manuales y mecánicas",
+              "resultados": [
+                {"ra": "01 Alistar materia prima e instrumentos de medición teniendo en cuenta normativa ocupacional, ambiental y procedimientos técnicos.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Seleccionar materiales de acuerdo con parámetros técnicos y normativa.", "Trazar y cortar material de acuerdo con planos y normativa ambiental."]},
+                {"ra": "02 Poner a punto herramientas y equipos de banco para el ajuste manual y mecánico.", "actividades": ["Fundamentar conceptos y principios de trabajo con herramientas de banco.", "Rectificar muelas de afilar teniendo en cuenta procedimientos técnicos.", "Afilar brocas cumpliendo procedimientos técnicos y normas de seguridad."]},
+                {"ra": "03 Ajustar manual y mecánicamente con herramientas y equipos de banco.", "actividades": ["Fundamentar conceptos y principios de ajustes y tolerancias.", "Aplicar técnicas de limado manual de acuerdo a parámetros establecidos.", "Ejecutar operaciones de roscado manual con macho y terraja."]}
+              ], "hD": 36, "hI": 12
+            }]},
+            "REALIZAR EL DESPIECE CORRESPONDIENTE A LAS PIEZAS DEL PROYECTO SEGÚN EL DIEDRO APROPIADO.": {"competencias": [{
+              "nombre": "Dibujar planos mecánicos de acuerdo con normas técnicas",
+              "resultados": [
+                {"ra": "01 Dibujar elementos mecánicos de acuerdo con especificaciones técnicas.", "actividades": ["Elaborar planos de acuerdo a las especificaciones técnicas del elemento.", "Dibujar a mano alzada y con instrumentos la geometría del elemento mecánico.", "Generar cortes, secciones y vistas ortogonales o isométricas."]},
+                {"ra": "Modelar componentes mecánicos en software CAD según especificaciones técnicas.", "actividades": ["Desarrollar ejercicios de modelado de sólidos por medio de las tecnologías CAD.", "Generar modelos digitales de piezas y ensambles mecánicos.", "Parametrizar los modelos digitales según tipo y dimensiones del elemento."]},
+                {"ra": "Documentar los planos según normas técnicas.", "actividades": ["Elaborar bitácora de los sólidos modelados por medio de las tecnologías CAD.", "Elaborar planos de fabricación y montaje de acuerdo con normas técnicas.", "Organizar archivos físicos y digitales de acuerdo a políticas de la empresa."]}
+              ], "hD": 36, "hI": 12
+            }]},
+            "CARACTERIZAR EL TORNO Y SUS PROCESOS, PARA EL MECANIZADO DE PIEZAS MECÁNICAS": {"competencias": [{
+              "nombre": "Mecanizar pieza industrial de acuerdo con técnicas manuales y semiautomáticas",
+              "resultados": [
+                {"ra": "Poner a punto materia prima, puesto de trabajo, máquina y herramientas de acuerdo al proceso de torneado convencional.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Seleccionar el material de acuerdo con especificaciones técnicas del plano.", "Patronar las herramientas de acuerdo con el orden operacional de mecanizado."]},
+                {"ra": "Ejecutar operaciones de torneado convencional de acuerdo con procedimientos técnicos y normativa ambiental.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Ajustar parámetros de mecanizado de acuerdo con el acabado superficial.", "Mecanizar productos metalmecánicos con torno convencional según procedimientos."]},
+                {"ra": "Mantener el torno convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Aplicar técnicas de lubricación en la máquina teniendo en cuenta la ruta entregada.", "Clasificar y disponer los residuos generados según procedimientos establecidos.", "Reportar fallas y necesidades de mantenimiento según lineamientos de la empresa."]}
+              ], "hD": 36, "hI": 12
+            }]},
+            "CARACTERIZAR LA FRESADORA Y SUS PROCESOS, PARA EL MECANIZADO DE PIEZAS MECÁNICAS": {"competencias": [{
+              "nombre": "Mecanizado de piezas en Tornos y Fresadoras Convencionales",
+              "resultados": [
+                {"ra": "Alistar materia prima, puesto de trabajo, máquina y herramientas de fresado convencional.", "actividades": ["Identificar los diferentes instrumentos de medición que intervienen en el proceso.", "Ajustar las características dimensionales del producto según especificaciones.", "Revisar la calidad del producto (acabados, tolerancias, dimensiones y geometría)."]},
+                {"ra": "Mecanizar productos metalmecánicos con fresadora convencional cumpliendo especificaciones técnicas.", "actividades": ["Realizar orden operacional de las piezas a mecanizar con parámetros de corte.", "Fabricar pieza con operaciones básicas de fresado según especificaciones técnicas.", "Fabricar pieza con operaciones propias de cabezal divisor según especificaciones."]},
+                {"ra": "Mantener la fresadora convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Aplicar técnicas de lubricación en la fresadora según ruta de mantenimiento.", "Almacenar el refrigerante usado de acuerdo con normas medioambientales.", "Informar fallas e inspección de la máquina según lineamientos de la empresa."]}
+              ], "hD": 48, "hI": 0
+            }]}
+          },
+          "PLANEACIÓN": {
+            "PREPARAR LOS INSUMOS REQUERIDOS PARA LA ELABORACIÓN DE LOS PRODUCTOS METALMECÁNICOS.": {"competencias": [{
+              "nombre": "Alistar máquina herramienta de control numérico de acuerdo con especificaciones técnicas",
+              "resultados": [
+                {"ra": "01 Alistar materia prima del producto según especificaciones técnicas.", "actividades": ["Seleccionar materiales para la fabricación de las piezas metalmecánicas.", "Utilizar técnicamente los instrumentos de medición de acuerdo a la pieza.", "Cortar el material de acuerdo al plano de fabricación y procedimientos técnicos."]}
+              ], "hD": 36, "hI": 12
+            }]},
+            "PLANEAR EL PROCESO DE FABRICACIÓN, DE ACUERDO CON REQUERIMIENTOS TÉCNICOS.": {"competencias": [{
+              "nombre": "Alistar máquina herramienta CNC de acuerdo con especificaciones técnicas",
+              "resultados": [
+                {"ra": "02 Alistar maquinaria de Control Numérico Computarizado y herramientas de acuerdo al proceso de mecanizado.", "actividades": ["Fundamentar conceptos y principios de los tratamientos térmicos y durezas.", "Verificar estado de la máquina CNC de acuerdo al proceso a realizar.", "Ajustar parámetros de mecanizado en la máquina herramienta CNC."]}
+              ], "hD": 36, "hI": 12
+            }]},
+            "DESARROLLAR LOS PROTOTIPOS REQUERIDOS PARA EL PROCESO DE MECANIZADO.": {"competencias": [{
+              "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+              "resultados": [
+                {"ra": "Modelar prototipos teniendo en cuenta las especificaciones técnicas y requerimientos del cliente.", "actividades": ["Desarrollar prototipos del proyecto de Formación en software CAD.", "Generar plano técnico de las piezas según las especificaciones del producto.", "Verificar en el simulador el programa del torno y fresadora según geometría."]}
+              ], "hD": 216, "hI": 72
+            }]},
+            "CREAR LAS RUTAS Y SECUENCIAS DE MECANIZADO PARA LAS MAQUINAS HERRAMIENTAS CNC.": {"competencias": [{
+              "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+              "resultados": [
+                {"ra": "Generar rutas de mecanizado para Tornos de Control Numérico Computarizado.", "actividades": ["Programar tornos CNC de acuerdo con procedimientos técnicos.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza.", "Documentar los programas del torno de acuerdo a procedimientos de mecanizado."]},
+                {"ra": "Generar rutas de mecanizado para Fresadoras de Control Numérico Computarizado.", "actividades": ["Programar fresadoras CNC de acuerdo con procedimientos técnicos.", "Establecer coordenadas en la fresadora de acuerdo a geometría de la pieza.", "Optimizar en el simulador el programa de la fresadora según geometría."]},
+                {"ra": "Generar rutas de mecanizado para Centros de Mecanizado CNC.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Simular el programa de la pieza a fabricar según el control de la máquina.", "Mecanizar la pieza en las máquinas CNC cumpliendo especificaciones técnicas."]}
+              ], "hD": 36, "hI": 12
+            }]}
+          },
+          "EJECUCIÓN Y EVALUACIÓN": {
+            "PRODUCIR EL MECANIZADO DE LAS PIEZAS EN MAQUINAS HERRAMIENTAS CNC.": {"competencias": [{
+              "nombre": "Mecanizar pieza industrial de acuerdo con sistema de control numérico",
+              "resultados": [
+                {"ra": "Fabricar piezas en Centros de Mecanizado de control numérico computarizado.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Establecer coordenadas en los centros de mecanizado según geometría.", "Verificar que el proceso y producto final cumplan requerimientos técnicos."]},
+                {"ra": "Fabricar piezas en Torno de control numérico computarizado.", "actividades": ["Elaborar piezas requeridas en el Proyecto de Formación con torno CNC.", "Ajustar parámetros del torno de acuerdo con el acabado superficial.", "Revisar la calidad del producto torneado según planos entregados."]},
+                {"ra": "Fabricar piezas en Fresadora de control numérico computarizado.", "actividades": ["Manejar software CAD-CAM para generar las rutas de mecanizado en fresadora.", "Fresar con diferentes técnicas teniendo en cuenta la geometría de la pieza.", "Determinar parámetros de corte según especificaciones de tolerancias y acabados."]}
+              ], "hD": 180, "hI": 60
+            }]},
+            "GESTIONAR LA PRODUCCIÓN EN ATENCIÓN A LOS REQUERIMIENTOS TÉCNICOS.": {"competencias": [{
+              "nombre": "Programar la producción según métodos y parámetros técnicos",
+              "resultados": [
+                {"ra": "Organizar proceso productivo de acuerdo a órdenes de fabricación, tiempos, mano de obra y materiales.", "actividades": ["Programar producción de acuerdo con estándares de fabricación.", "Diseñar cronogramas de fabricación dependiendo del proceso de mecanizado.", "Elaborar diagramas de Gantt y listas de chequeo según programa de producción."]},
+                {"ra": "Diseñar programa de producción de piezas metalmecánicas según requerimientos y estándares.", "actividades": ["Elaborar el control estadístico y de calidad de las piezas fabricadas.", "Elaborar informe de producción de acuerdo con el tiempo estándar establecido.", "Calcular la capacidad de trabajo de las máquinas de mecanizado."]}
+              ], "hD": 108, "hI": 36
+            }]}
+          }
+        }
+      },
+
+      "3343700 - FABRICACIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CNC PARA EL SECTOR INDUSTRIAL DEL ATLÁNTICO": {
+        "nombre_completo": "3343700 - FABRICACIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CNC PARA EL SECTOR INDUSTRIAL DEL ATLÁNTICO",
+        "fases": {
+          "IDENTIFICACIÓN": {
+            "DETERMINAR LAS ESPECIFICACIONES TÉCNICAS DEL PROCESO DE FABRICACIÓN DE UN COMPONENTE MECÁNICO.": {"competencias": [
+              {"nombre": "290201212 - ALISTAMIENTO DE MATERIA PRIMA, ACCESORIOS Y PLAN DE PRODUCCIÓN PARA MAQUINAS HERRAMIENTAS CNC",
+               "resultados": [
+                {"ra": "01. Alistar materia prima del producto según especificaciones técnicas.", "actividades": ["Identificar el tipo de material a mecanizar teniendo en cuenta sus propiedades y características.", "Seleccionar y cortar el material de acuerdo al plano de fabricación.", "Cumplir normas medioambientales, de seguridad y salud ocupacional en el alistamiento."]},
+                {"ra": "02. Alistar maquinaria CNC y herramientas de acuerdo al proceso de mecanizado.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Verificar estado de la máquina de acuerdo al proceso a realizar.", "Ajustar herramienta de corte teniendo en cuenta el proceso de mecanizado."]}
+               ], "hD": 36, "hI": 12},
+              {"nombre": "290201190 - ELABORACIÓN DE PLANOS MECÁNICOS DE ACUERDO CON NORMAS TÉCNICAS",
+               "resultados": [
+                {"ra": "02. Documentar los planos según normas técnicas.", "actividades": ["Elaborar bitácora de los sólidos modelados por medio de las tecnologías CAD.", "Elaborar planos de fabricación y montaje según normas técnicas.", "Organizar técnicamente los archivos físicos y digitales."]},
+                {"ra": "03. Dibujar elementos mecánicos de acuerdo con especificaciones técnicas.", "actividades": ["Elaborar planos de acuerdo a las especificaciones técnicas del elemento a fabricar.", "Dibujar a mano alzada y con instrumentos la geometría del elemento mecánico.", "Generar cortes, secciones y vistas ortogonales o isométricas."]}
+               ], "hD": 36, "hI": 12},
+              {"nombre": "290201210 - PULIR PIEZAS INDUSTRIALES DE ACUERDO CON TÉCNICAS MANUALES Y MECÁNICAS",
+               "resultados": [
+                {"ra": "01. Alistar materia prima e instrumentos de medición teniendo en cuenta normativa ocupacional, ambiental y procedimientos técnicos.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos.", "Identificar y clasificar instrumentos de medición dimensional.", "Convertir unidades entre sistemas de medición."]}
+               ], "hD": 36, "hI": 12}
+            ]}
+          },
+          "ALISTAMIENTO": {
+            "DEFINIR LA SECUENCIA OPERACIONAL PARA LA FABRICACIÓN DE UN COMPONENTE MECÁNICO.": {"competencias": [
+              {"nombre": "290201190 - ELABORACIÓN DE PLANOS MECÁNICOS DE ACUERDO CON NORMAS TÉCNICAS",
+               "resultados": [
+                {"ra": "01. Modelar componentes mecánicos en software CAD según especificaciones técnicas.", "actividades": ["Desarrollar ejercicios de modelado de sólidos por medio de las tecnologías CAD.", "Generar modelos digitales de piezas y ensambles mecánicos según especificaciones.", "Parametrizar los modelos digitales según tipo y dimensiones del elemento mecánico."]}
+               ], "hD": 36, "hI": 12},
+              {"nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+               "resultados": [
+                {"ra": "03. Modelar prototipos teniendo en cuenta las especificaciones técnicas y requerimientos del cliente.", "actividades": ["Desarrollar prototipos del proyecto de Formación en software CAD.", "Generar plano técnico de las piezas según las especificaciones del producto.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza."]}
+               ], "hD": 216, "hI": 72},
+              {"nombre": "220601048 - PROGRAMACIÓN DE LA PRODUCCIÓN PARA LA FABRICACIÓN DE PRODUCTOS MECANIZADOS",
+               "resultados": [
+                {"ra": "01. Organizar proceso productivo de acuerdo a órdenes de fabricación, tiempos, mano de obra y materiales requeridos.", "actividades": ["Programar producción de acuerdo con estándares de fabricación.", "Diseñar cronogramas de fabricación dependiendo del proceso de mecanizado.", "Elaborar histogramas, diagramas de Gantt y listas de chequeo."]},
+                {"ra": "02. Diseñar programa de producción de piezas metalmecánicas según requerimientos y estándares.", "actividades": ["Elaborar el control estadístico y de calidad de las piezas fabricadas.", "Calcular la capacidad de trabajo de las máquinas de mecanizado.", "Identificar los puntos críticos de control del proceso productivo."]}
+               ], "hD": 108, "hI": 36}
+            ]},
+            "PREPARAR EL ÁREA DE TRABAJO Y LOS INSUMOS PARA LA FABRICACIÓN DE COMPONENTES MECÁNICOS.": {"competencias": [
+              {"nombre": "290201210 - PULIR PIEZAS INDUSTRIALES DE ACUERDO CON TÉCNICAS MANUALES Y MECÁNICAS",
+               "resultados": [
+                {"ra": "03. Poner a punto herramientas y equipos de banco para el ajuste manual y mecánico.", "actividades": ["Fundamentar conceptos y principios de trabajo con herramientas de banco.", "Afilar herramientas de corte teniendo en cuenta el tipo de trabajo.", "Lubricar herramientas y equipos de banco según procedimientos técnicos."]},
+                {"ra": "02. Ajustar manual y mecánicamente con herramientas y equipos de banco.", "actividades": ["Fundamentar conceptos y principios de ajustes y tolerancias.", "Aplicar técnicas de limado manual de acuerdo a parámetros establecidos.", "Ejecutar operaciones de roscado manual con macho y terraja."]}
+               ], "hD": 36, "hI": 12},
+              {"nombre": "290201211 - MECANIZADO DE PIEZAS EN TORNOS Y FRESADORAS CONVENCIONALES",
+               "resultados": [
+                {"ra": "02. Alistar materia prima, puesto de trabajo, máquina y herramientas de fresado convencional.", "actividades": ["Identificar conceptos y principios de metrología con máquinas de medición por coordenadas.", "Establecer e interpretar secuencias de fabricación para el mecanizado en fresadora.", "Seleccionar herramientas de corte a utilizar en los procesos de fresado."]},
+                {"ra": "04. Mantener la fresadora convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Mecanizar piezas en máquinas fresadora convencional.", "Aplicar técnicas de lubricación en la fresadora según ruta de mantenimiento.", "Informar fallas e inspección de la máquina según lineamientos de la empresa."]},
+                {"ra": "05. Poner a punto materia prima, puesto de trabajo, máquina y herramientas de torneado convencional.", "actividades": ["Fundamentar conceptos y principios de metrología con instrumentos análogos, digitales y automáticos.", "Interpretar secuencias de fabricación o ruta de trabajo en tornos paralelos.", "Seleccionar materiales y herramientas de corte para el torneado."]},
+                {"ra": "06. Mantener el torno convencional en condiciones óptimas de limpieza, ajuste y lubricación.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Aplicar técnicas de lubricación en la máquina teniendo en cuenta la ruta entregada.", "Clasificar y disponer los residuos generados según procedimientos establecidos."]}
+               ], "hD": 36, "hI": 12}
+            ]}
+          },
+          "FABRICACIÓN": {
+            "PRODUCIR COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CONVENCIONALES.": {"competencias": [
+              {"nombre": "290201211 - MECANIZADO DE PIEZAS EN TORNOS Y FRESADORAS CONVENCIONALES",
+               "resultados": [
+                {"ra": "03. Ejecutar operaciones de torneado convencional de acuerdo con procedimientos técnicos y normativa ambiental.", "actividades": ["Elaborar ruta operacional del proceso de mecanizado mediante torneado convencional.", "Ajustar parámetros de mecanizado de acuerdo con el acabado superficial.", "Mecanizar productos metalmecánicos con torno convencional según procedimientos."]},
+                {"ra": "01. Mecanizar productos metalmecánicos con fresadora convencional cumpliendo especificaciones técnicas.", "actividades": ["Mecanizar piezas en máquinas fresadora convencional.", "Ajustar los parámetros de mecanizado de acuerdo con el acabado superficial.", "Revisar la calidad del producto (acabados, tolerancias, dimensiones y geometría)."]}
+               ], "hD": 72, "hI": 24}
+            ]},
+            "PRODUCIR COMPONENTES MECÁNICOS CON MÁQUINAS HERRAMIENTAS CNC": {"competencias": [
+              {"nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+               "resultados": [
+                {"ra": "04. Generar rutas de mecanizado para Tornos CNC.", "actividades": ["Programar tornos, fresadoras y centros de mecanizado CNC.", "Establecer coordenadas en el torno de acuerdo a geometría de la pieza.", "Documentar los programas del torno de acuerdo a procedimientos de mecanizado."]},
+                {"ra": "02. Generar rutas de mecanizado para Fresadoras CNC.", "actividades": ["Programar fresadoras CNC de acuerdo con procedimientos técnicos.", "Optimizar en el simulador el programa de la fresadora según geometría.", "Determinar parámetros de mecanizado para la fresadora CNC."]},
+                {"ra": "07. Generar rutas de mecanizado para Centros de Mecanizado CNC.", "actividades": ["Programar centros de mecanizado CNC con ayuda de software CAM.", "Simular el programa de los centros de mecanizado CNC.", "Mecanizar la pieza en las máquinas CNC cumpliendo especificaciones técnicas."]},
+                {"ra": "06. Fabricar piezas en Centros de Mecanizado CNC.", "actividades": ["Programar tornos, fresadoras y centros de mecanizado CNC con ayuda de software CAM.", "Verificar que el proceso y producto final cumplan requerimientos técnicos.", "Controlar las dimensiones del producto en el mecanizado CNC."]},
+                {"ra": "01. Fabricar piezas en Torno CNC.", "actividades": ["Elaborar piezas requeridas en el Proyecto de Formación con torno CNC.", "Ajustar parámetros del torno de acuerdo con el acabado superficial.", "Revisar la calidad del producto torneado según planos entregados."]},
+                {"ra": "05. Fabricar piezas en Fresadora CNC.", "actividades": ["Manejar software CAD-CAM para generar las rutas de mecanizado en fresadora.", "Fresar con diferentes técnicas teniendo en cuenta la geometría de la pieza.", "Determinar parámetros de corte según especificaciones de tolerancias y acabados."]}
+               ], "hD": 180, "hI": 60}
+            ]},
+            "VERIFICAR LA PRODUCCIÓN DE LOS COMPONENTES MECÁNICOS CON ESTÁNDARES DE CALIDAD.": {"competencias": [
+              {"nombre": "290201213 - MECANIZADO DE PIEZAS UTILIZANDO MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+               "resultados": [
+                {"ra": "06. Fabricar piezas en Centros de Mecanizado CNC (verificación de calidad).", "actividades": ["Verificar que el proceso y producto final cumplan requerimientos técnicos.", "Controlar las dimensiones durante el proceso, cumpliendo requerimientos del plano.", "Elaborar informe de producción de acuerdo con el tiempo estándar establecido."]}
+               ], "hD": 180, "hI": 60}
+            ]}
+          },
+          "MEJORAMIENTO": {
+            "Ensamblar los componentes mecánicos fabricados aplicando estrategias de solución": {"competencias": [{
+              "nombre": "RESULTADOS DE APRENDIZAJE ETAPA PRÁCTICA",
+              "resultados": [
+                {"ra": "Aplicar en la resolución de problemas reales del sector productivo los conocimientos, habilidades y destrezas pertinentes a las competencias del programa de formación.", "actividades": ["Aplicar estrategias y metodologías de autogestión en el sector productivo.", "Resolver problemas reales integrando las competencias adquiridas durante la formación.", "Presentar informe de actividades realizadas en la etapa productiva."]}
+              ], "hD": 0, "hI": 0
+            }]}
+          }
+        }
+      }
+    }
+  }
+  ,
+  "223318 - PROCESOS DE MANUFACTURA": {
+    "proyectos": {
+      "3473816 - OPERACIÓN DE LOS PROCESOS PARA EL CONTROL, MANTENIMIENTO Y SEGUIMIENTO DE LA PRODUCTIVIDAD EN LAS ORGANIZACIONES DE MANUFACTURA Y SERVICIOS DEL DEPARTAMENTO DEL ATLANTICO": {
+        "nombre_completo": "3473816 - OPERACIÓN DE LOS PROCESOS PARA EL CONTROL, MANTENIMIENTO Y SEGUIMIENTO DE LA PRODUCTIVIDAD EN LAS ORGANIZACIONES DE MANUFACTURA Y SERVICIOS DEL DEPARTAMENTO DEL ATLANTICO",
+        "fases": {
+          "PLANEAR": {
+            "PREPARAR LOS RECURSOS PARA REALIZAR LAS ACTIVIDADES SEGÚN EL PROGRAMA DE PRODUCCIÓN": {"competencias": [
+              {
+                "nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "Describir entorno legal, organizacional, tecnológico, económico, ambiental y competitivo de la empresa según el sector industrial  y económico al que pertenece.", "actividades": [
+                    "Identificar los factores socioeconómicos, ambientales y legales que influyen en el sistema productivo de la organización.",
+                  ]},
+                  {"ra": "Describir el sistema productivo con base en el nivel de transformación, la organización que se tiene para producir y la naturaleza del producto.", "actividades": [
+                    "Definir el sistema de producción de acuerdo a las características del producto a fabricar y las necesidades de la organización",
+                  ]},
+                  {"ra": "Alistar recursos teniendo en cuenta las tareas de producción y procedimientos de seguridad y salud en el trabajo", "actividades": [
+                    "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
+                  ]},
+                ],
+                "hD": 20, "hI": 5
+              },
+              {
+                "nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "DEFINIR LOS ELEMENTOS QUE INTEGRAN EL SISTEMA LOGÍSTICO DE LA ORGANIZACIÓN TENIENDO EN CUENTA FLUJO DE MATERIALES E INFORMACIÓN DEL PROCESO PRODUCTIVO.", "actividades": [
+                    "Clasificar los elementos claves que hacen parte de un sistema logistico ideal teniendo en cuenta flujo de materiales e información del proceso productivo.",
+                  ]},
+                  {"ra": "REALIZAR LA DOCUMENTACIÓN DE LAS ACTIVIDADES DEL SISTEMA LOGÍSTICO DE ACUERDO CON PROCEDIMIENTOS ESTABLECIDOS POR LA ORGANIZACIÓN.", "actividades": [
+                    "Analizar los documentos requeridos en las actividades logisticas de un sistema productivo cualquiera.",
+                  ]},
+                ],
+                "hD": 26, "hI": 6
+              },
+              {
+                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "DETERMINAR LAS VARIABLES DEL PROCESO PRODUCTIVO DEL PRODUCTO SEGÚN REQUERIMIENTOS DEL PROCESO DE PRODUCCIÓN", "actividades": [
+                    "Identificar las diferentes variables de calidad y sus respectivas unidades de medición de acuerdo con los requerimientos del proceso",
+                  ]},
+                ],
+                "hD": 35, "hI": 9
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {"ra": "LEER TEXTOS MUY BREVES Y SENCILLOS EN INGLÉS GENERAL Y TÉCNICO", "actividades": [
+                    "GUIA TPM #3            Technical Vocabulary Discovery & Classification / Descubrimiento de Vocabulario Técnico y clasificación. Design a Production Plant – Latex Balloons / Diseña una planta de producción de Globos de latex. Inventory & Packaging Case Study / Estudio de caso de Inventario y Empaque Quality Audit Role-play at Sempertex / Simulación de Auditoría de Calidad en Sempertex",
+                  ]},
+                  {"ra": "COMPRENDER FRASES Y VOCABULARIO HABITUAL SOBRE TEMAS DE INTERÉS PERSONAL Y TEMAS TÉCNICOS", "actividades": [
+                    "Desarrollar actividades relacionadas con: COMPRENDER FRASES Y VOCABULARIO HABITUAL SOBRE TEMAS DE INTE",
+                  ]},
+                ],
+                "hD": 14, "hI": 3
+              },
+              {
+                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+                "resultados": [
+                  {"ra": "24020150010 - Reconocer el rol de los participantes en el proceso formativo, el papel de los ambientes de aprendizaje y la metodología de formación, de acuerdo con la dinámica organizacional del SENA  24020150011 - Asumir los deberes y derechos con base en las leyes y la normativa institucional en el marco de su proyecto de vida.", "actividades": [
+                    "ACT. 1  Identificar el rol de los participantes en el proceso formativo, según los  elemento  de la dinámica organizacional del SENA y  el Reglamento Interno de la Entidad como aprendiz",
+                  ]},
+                  {"ra": "24020150012 - Gestionar la información de acuerdo con los procedimientos establecidos y con las tecnologías de la información y la comunicación disponibles.  24020150002 -Asumir actitudes críticas, argumentativas y propositivas en función de la resolución de problemas de carácter productivo y social.", "actividades": [
+                    "ACT. 1 demostrar la comprensión y aplicación de los conceptos de trabajo en equipo mediante la participación en una actividad grupal, aplicando principios de comunicación, cooperación y respeto mutuo.",
+                    "ACT. 2 aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
+                  ]},
+                  {"ra": "24020150013 - Identificar las oportunidades que el Sena ofrece en el marco de la formación profesional de acuerdo con el contexto nacional e internacional.  24020150014 - Concertar alternativas y acciones de formación para el desarrollo de las competencias del programa formación, con base en la política institucional.", "actividades": [
+                    "ACT. 1 analizar situaciones reales y simuladas donde se presenten conflictos de valores, proponiendo soluciones que se basen en principios éticos universales.",
+                    "ACT. 2  Construir proyecto de vida, aplicando principios de autoconocimiento y proyección personal",
+                  ]},
+                  {"ra": "24020150009 Desarrollar permanentemente las habilidades psicomotrices y de pensamiento en la ejecución de los procesos de aprendizaje.", "actividades": [
+                    "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
+                    "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
+                  ]},
+                ],
+                "hD": 5, "hI": 1
+              },
+            ]},
+          },
+          "CONTROLAR": {
+            "PROPONER ACCIONES DE MEJORA NECESARIAS PARA EL FORTALECIMIENTO DE PROCESOS Y SERVICIOS": {"competencias": [
+              {
+                "nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "APOYAR EL CUMPLIMIENTO DE LAS METAS ESTABLECIDAS CON BASE EN LOS RESULTADOS DE LOS INDICADORES.", "actividades": [
+                    "Comprender la importancia de indicadores de gestión en un sistema productivo para el mejoramiento de procesos",
+                  ]},
+                  {"ra": "VERIFICAR EL CUMPLIMIENTO DE LOS PROTOCOLOS DE SEGURIDAD Y SALUD OCUPACIONAL APLICADOS AL DESARROLLO DE LAS ACTIVIDADES LOGÍSTICAS EN EL PROCESO PRODUCTIVO DE ACUERDO CON POLÍTICAS DE LA EMPRESA Y NORMATIVIDAD VIGENTE", "actividades": [
+                    "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
+                  ]},
+                  {"ra": "EJECUTAR TAREAS DE ALISTAMIENTO DE PEDIDOS CON BASE EN LOS REQUERIMIENTOS DEL PROCESO LOGÍSTICO DE LA EMPRESA", "actividades": [
+                    "Administrar los inventarios de materiales según los procedimientos de la organización  Reconocer los diferentes medios de transporte existentes para la distribución del producto.  Analizar las diferentes áreas de acción de selección y evaluación de proveedores teniendo en cuenta las características de adquisición de un producto y las normas establecidas en la empresa.   Aplicar  métodos de almacenaje  y conservación de materiales teniendo en cuenta características del producto.     Identificar y seleccionar el tipo de empaque y embalaje de acuerdo con las características del producto.",
+                  ]},
+                ],
+                "hD": 40, "hI": 10
+              },
+              {
+                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "INTERPRETAR LAS CARTAS DE CONTROL Y EL COMPORTAMIENTO ESTADÍSTICO DE LOS DATOS DE LAS VARIABLES DE ACUERDO CON LOS RANGOS ESTABLECIDOS.", "actividades": [
+                    "Interpretar las cartas de control de variables del proceso productivo, aplicando herramientas estadísticas de control de calidad, para la identificación del comportamiento del proceso y la determinación de si se encuentra bajo control estadístico",
+                  ]},
+                ],
+                "hD": 35, "hI": 9
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {"ra": "COMUNICARSE EN TAREAS SENCILLAS Y HABITUALES QUE REQUIEREN UN INTERCAMBIO SIMPLE Y DIRECTO DE INFORMACIÓN COTIDIANA Y TÉCNICA", "actividades": [
+                    "GUIA PPE #1                        Safety Toolbox talks. Vocabulary Personal Protective Equipments.",
+                  ]},
+                  {"ra": "REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON UN VOCABULARIO SUFICIENTE PARA HACER UNA EXPOSICIÓN O MANTENER UNA CONVERSACIÓN SENCILLA SOBRE TEMAS TÉCNICOS", "actividades": [
+                    "GUIA PPE #1                      PPE Concepts.                    Define in English what body parts are associated with PPE.                                           Find the synonym in English of the following words.",
+                  ]},
+                ],
+                "hD": 24, "hI": 6
+              },
+              {
+                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+                "resultados": [
+                  {"ra": "24020150003 - Generar procesos autónomos y de trabajo colaborativo permanentes, fortaleciendo el equilibrio de los componentes racionales y emocionales orientados hacia el Desarrollo Humano Integral.  24020150005 - Desarrollar procesos comunicativos eficaces y asertivos dentro de criterios de racionalidad que posibiliten la convivencia, el establecimiento de acuerdos, la construcción colectiva del conocimiento y la resolución de problemas de carácter productivo y social", "actividades": [
+                    "ACT. 1 demostrar la comprensión y aplicación de los conceptos de trabajo en equipo mediante la participación en una actividad grupal, aplicando principios de comunicación, cooperación y respeto mutuo.",
+                    "ACT. 2 aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
+                  ]},
+                  {"ra": "24020150008 - Aplicar técnicas de cultura física para el mejoramiento de su expresión corporal, desempeño laboral según la naturaleza y complejidad del área ocupacional.", "actividades": [
+                    "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
+                    "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
+                  ]},
+                ],
+                "hD": 5, "hI": 1
+              },
+            ]},
+          },
+          "EJECUTAR": {
+            "DESARROLLAR LAS ACTIVIDADES DE LOS PROCESOS PRODUCTIVOS Y DE SERVICIOS": {"competencias": [
+              {
+                "nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "DETERMINAR TAREAS DE PRODUCCIÓN DE ACUERDO CON EL PROGRAMA DE PRODUCCIÓN.", "actividades": [
+                    "Analizar las diferentes distribuciones de plantas físicas teniendo en cuenta sus características según su producción  Comprender los principios básicos de Lean Manufacturing utilizados en la mejora continua en el área de producción",
+                  ]},
+                  {"ra": "REGISTRAR TIEMPOS Y EVENTOS DE LOS PROCESOS DE PRODUCCIÓN DE ACUERDO CON LOS MÉTODOS Y TÉCNICAS ESTABLECIDOS", "actividades": [
+                    "Reconocer y aplicar métodos y técnicas para el análisis de los tiempos y el ordenamiento de los procesos de producción  Comprender la relación entre productividad y los recursos utilizados en un sistema productivo.",
+                  ]},
+                  {"ra": "SEGUIR EL PLAN DE EMERGENCIA Y CONTINGENCIA, TENIENDO EN CUENTA EL PROCEDIMIENTO ESTABLECIDO POR LA ORGANIZACIÓN.", "actividades": [
+                    "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
+                  ]},
+                ],
+                "hD": 26, "hI": 7
+              },
+              {
+                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "REALIZAR MEDICIONES DE VARIABLES DE PROCESO Y DE PRODUCTO TENIENDO EN CUENTA LOS PROCEDIMIENTOS ESTABLECIDOS", "actividades": [
+                    "Realizar las mediciones de las variables",
+                  ]},
+                  {"ra": "CONTROLAR LAS VARIABLES DEL PROCESO Y DEL PRODUCTO CON BASE EN TÉCNICAS ESTABLECIDAS, SET UP Y NORMATIVIDAD VIGENTE.", "actividades": [
+                    "Identificar los diferentes Ensayos y Pruebas de materiales teniendo en cuenta las características del producto  Reconocer la importancia de la estadística en la vida diaria a partir de situaciones cotidianas",
+                  ]},
+                ],
+                "hD": 35, "hI": 9
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {"ra": "ENCONTRAR INFORMACIÓN ESPECÍFICA Y PREDECIBLE EN ESCRITOS SENCILLOS Y COTIDIANOS", "actividades": [
+                    "GUIA TPM #2                  Identificar la importancia de las medidas de seguridad en los procesos de manufactura usando los adverbios de frecuencia.  Reconocer una materia prima para la elaboración de un producto usando los adverbios de frecuencia. (Globos de latex). Identificar los equipos, herramientas, EPP de los procesos de manufactura usando el There is / There are.",
+                  ]},
+                  {"ra": "ENCONTRAR VOCABULARIO Y EXPRESIONES DE INGLÉS TÉCNICO EN ANUNCIOS, FOLLETOS, PÁGINAS WEB, ETC", "actividades": [
+                    "GUIA TPM #2               Socializar los diferentes aspectos de control de calidad en los procesos de manufactura usando los adjetivos comparativos. Descripcion de PRO Y CONTRAS de procesos de manufactura utilizando el vocabulario adecuado en inglés y aplicando las temáticas vistas. Desarrollar acciones de mejoras en los procesos de manufactura usando las temáticas vistas. Manufacturing Process Improvement Evaluation Table (with Frequency Adverbs and Comparatives)Aplicar vocabulario y temáticas vistas en un texto escrito.",
+                  ]},
+                ],
+                "hD": 21, "hI": 5
+              },
+              {
+                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+                "resultados": [
+                  {"ra": "24020150006 -  Asumir responsablemente los criterios de preservación y conservación del Medio Ambiente y de Desarrollo Sostenible, en el ejercicio de su desempeño laboral y social.  24020150007 - Generar hábitos saludables en su estilo de vida para garantizar la prevención de riesgos ocupacionales de acuerdo con el diagnóstico de su condición física individual y la naturaleza y complejidad de su desempeño laboral.", "actividades": [
+                    "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
+                    "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
+                  ]},
+                  {"ra": "24020150001 - Interactuar en los contextos Productivos y Sociales en función de los Principios y Valores Universales.   24020150004 - Redimensionar permanentemente su Proyecto de Vida de acuerdo con las circunstancias del contexto y con visión prospectiva.", "actividades": [
+                    "ACT. 1 analizar situaciones reales y simuladas donde se presenten conflictos de valores, proponiendo soluciones que se basen en principios éticos universales.",
+                    "ACT. 2  Construir proyecto de vida, aplicando principios de autoconocimiento y proyección personal",
+                  ]},
+                ],
+                "hD": 5, "hI": 1
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+  ,
+  "221402 - ASEGURAMIENTO METROLOGICO INDUSTRIAL": {
+    "proyectos": {
+      "2721554 - IMPLEMENTACIÓN DE UN SISTEMA DE GESTIÓN METROLÓGICA PARA LOS PROCESOS DE PRODUCCIÓN Y ASEGURAMIENTO DE LA CALIDAD EN UNA INDUSTRIA DE MANUFACTURA": {
+        "nombre_completo": "2721554 - IMPLEMENTACIÓN DE UN SISTEMA DE GESTIÓN METROLÓGICA PARA LOS PROCESOS DE PRODUCCIÓN Y ASEGURAMIENTO DE LA CALIDAD EN UNA INDUSTRIA DE MANUFACTURA",
+        "fases": {
+          "ANÁLISIS": {
+            "Analizar la información de los componentes del sistema de gestión metrológica en una industria manufacturera, de acuerdo con la normatividad vigente.": {"competencias": [
+              {
+                "nombre": "Inducción",
+                "resultados": [
+                  {"ra": "Identificar la dinámica organizacional del SENA y el rol de la Formación Profesional Integral de acuerdo con su proyecto de vida y el desarrollo profesional.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Identificar la dinámica organizacional del SENA y el rol de ",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Prueba de ítems",
+                "resultados": [
+                  {"ra": "Interpretar información recolectada en los ensayos, según protocolo o normatividad", "actividades": [
+                    "Aplicar procedimientos técnicos en el análisis de información obtenida en ensayos.",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+              {
+                "nombre": "Determinación de necesidades metrológicas",
+                "resultados": [
+                  {"ra": "Caracterizar requerimientos del sistema metrológico de la organización de acuerdo con políticas y requisitos.", "actividades": [
+                    "Identificar requisitos y características del sistema metrológico de la organización",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+              {
+                "nombre": "Verificación de condiciones metrológicas",
+                "resultados": [
+                  {"ra": "Valorar funcionamiento del programa de aseguramiento metrológico según parámetros establecidos en el procedimiento técnico.", "actividades": [
+                    "Realizar diagnóstico de equipos e instrumentos para su funcionamiento",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+              {
+                "nombre": "Clave - Razonar cuantitativamente frente a situaciones susceptibles de ser abordadas de manera matemática en contextos laborales, sociales y personales.",
+                "resultados": [
+                  {"ra": "Identificar modelos matemáticos de acuerdo con los requerimientos del problema planteado en contextos sociales y productivo                         RAP 43", "actividades": [
+                    "Aplicar en situaciones reales los procedimientos matematicos para resolver situaciones, problematicas o necesidades de su entorno",
+                  ]},
+                  {"ra": "Plantear problemas matemáticos a partir de situaciones generadas en el contexto social y productivo                         RAP 42", "actividades": [
+                    "Aplicar en situaciones reales los procedimientos matematicos para resolver situaciones, problematicas o necesidades de su entorno",
+                  ]},
+                  {"ra": "Resolver problemas matemáticos a partir de situaciones generadas en el contexto social y productivo                        RAP 44", "actividades": [
+                    "Aplicar en situaciones reales los procedimientos matematicos para resolver situaciones, problematicas o necesidades de su entorno",
+                  ]},
+                  {"ra": "Proponer acciones de mejora frente a los resultados de los procedimientos matemáticos de acuerdo con el problema planteado                         RAP 45", "actividades": [
+                    "Aplicar en situaciones reales los procedimientos matematicos para resolver situaciones, problematicas o necesidades de su entorno",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Clave - Aplicación de conocimientos de las ciencias naturales de acuerdo con situaciones del contexto productivo y social",
+                "resultados": [
+                  {"ra": "Identificar los principios y leyes de la física en la solución de problemas de acuerdo al contexto productivo.", "actividades": [
+                    "Resolver las situaciones practicas que involucren la interpretacion de fenomenos fisicos y sus respectivos calculos aritmeticos",
+                  ]},
+                  {"ra": "Solucionar problemas asociados con el sector productivos con base en los principios y leyes de la física", "actividades": [
+                    "Resolver las situaciones practicas que involucren la interpretacion de fenomenos fisicos y sus respectivos calculos aritmeticos",
+                  ]},
+                  {"ra": "Verificar las transformaciones físicas de la materia utilizando herramientas tecnológicas.", "actividades": [
+                    "Resolver las situaciones practicas que involucren la interpretacion de fenomenos fisicos y sus respectivos calculos aritmeticos",
+                  ]},
+                  {"ra": "Proponer acciones de mejora en los procesos productivos de acuerdo con los principios y leyes de la física", "actividades": [
+                    "Resolver las situaciones practicas que involucren la interpretacion de fenomenos fisicos y sus respectivos calculos aritmeticos",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Clave – Aplicación de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades del entorno",
+                "resultados": [
+                  {"ra": "Alistar herramientas de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades de procesamiento de información y comunicación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Alistar herramientas de tecnologías de la información y la c",
+                  ]},
+                  {"ra": "Aplicar funcionalidades de herramientas y servicios TIC, de acuerdo con manuales de uso, procedimientos establecidos y buenas prácticas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Aplicar funcionalidades de herramientas y servicios TIC, de ",
+                  ]},
+                  {"ra": "Evaluar los resultados, de acuerdo con los requerimientos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Evaluar los resultados, de acuerdo con los requerimientos.",
+                  ]},
+                  {"ra": "Optimizar los resultados, de acuerdo con la verificación", "actividades": [
+                    "Desarrollar actividades relacionadas con: Optimizar los resultados, de acuerdo con la verificación",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Clave – Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el marco común europeo de referencia para las lenguas",
+                "resultados": [
+                  {"ra": "Comprender información sobre situaciones cotidianas y laborales actuales y futuras a través de interacciones sociales de forma oral y escrita.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Comprender información sobre situaciones cotidianas y labora",
+                  ]},
+                  {"ra": "Intercambiar opiniones sobre situaciones cotidianas y laborales actuales, pasadas y futuras en contextos sociales orales y escritos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Intercambiar opiniones sobre situaciones cotidianas y labora",
+                  ]},
+                  {"ra": "Discutir sobre posibles soluciones a problemas dentro de un rango variado de contextos sociales y laborales.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Discutir sobre posibles soluciones a problemas dentro de un ",
+                  ]},
+                ],
+                "hD": 48, "hI": 16
+              },
+              {
+                "nombre": "Transversal - Aplicar prácticas de protección ambiental, seguridad y salud en el trabajo de acuerdo con las políticas organizacionales y la normatividad vigente",
+                "resultados": [
+                  {"ra": "Analizar las estrategias para la prevención y control de los impactos ambientales y de los accidentes y enfermedades laborales (ATEL) de acuerdo con las políticas organizacionales y el entorno social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Analizar las estrategias para la prevención y control de los",
+                  ]},
+                  {"ra": "Implementar estrategias para el control de los impactos ambientales y de los accidentes y enfermedades de acuerdo con los planes y programas establecidos por la organización.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Implementar estrategias para el control de los impactos ambi",
+                  ]},
+                  {"ra": "Realizar seguimiento y acompañamiento al desarrollo de los planes y programas ambientales y SST, según el área de desempeño.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Realizar seguimiento y acompañamiento al desarrollo de los p",
+                  ]},
+                  {"ra": "Proponer acciones de mejora para el manejo ambiental y el control de la SST, de acuerdo con estrategias de trabajo, colaborativo, cooperativo y coordinado en el contexto productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Proponer acciones de mejora para el manejo ambiental y el co",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+            ]},
+          },
+          "Planeación": {
+            "Definir acciones para implementar el sistema de gestión de las medicones, de acuerdo con las normas nacionales e internacionales, en una industria de manufactura.": {"competencias": [
+              {
+                "nombre": "Prueba de ítems",
+                "resultados": [
+                  {"ra": "Identificar métodos de ensayo a ítems, de acuerdo a requerimientos o procedimiento técnico", "actividades": [
+                    "Identificar requerimientos para el desarrollo de los ensayos de ítems",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Determinación de necesidades metrológicas",
+                "resultados": [
+                  {"ra": "Definir recursos requeridos para la ejecución de funciones metrológicas de acuerdo con necesidades del proceso.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Definir recursos requeridos para la ejecución de funciones m",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Clave - Desarrollar procesos de comunicación oral y escritos en forma eficaz y efectiva, teniendo en cuenta situaciones de orden social, personal y productivo.",
+                "resultados": [
+                  {"ra": "Analizar los componentes de la comunicación según sus características, intencionalidad y contexto.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Analizar los componentes de la comunicación según sus caract",
+                  ]},
+                  {"ra": "Argumentar en forma oral y escrita atendiendo las exigencias y particularidades de las diversas situaciones comunicativas mediante los distintos sistemas de representación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Argumentar en forma oral y escrita atendiendo las exigencias",
+                  ]},
+                  {"ra": "Relacionar los procesos comunicativos teniendo en cuenta criterios de lógica y racionalidad", "actividades": [
+                    "Desarrollar actividades relacionadas con: Relacionar los procesos comunicativos teniendo en cuenta cri",
+                  ]},
+                  {"ra": "Establecer procesos de enriquecimiento lexical y acciones de mejoramiento en el desarrollo de procesos comunicativos según requerimientos del contexto.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Establecer procesos de enriquecimiento lexical y acciones de",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Clave – Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el marco común europeo de referencia para las lenguas",
+                "resultados": [
+                  {"ra": "Presentar un proceso para la realización de una actividad en su quehacer laboral de acuerdo con los procedimientos establecidos desde su programa de formación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Presentar un proceso para la realización de una actividad en",
+                  ]},
+                ],
+                "hD": 48, "hI": 16
+              },
+              {
+                "nombre": "Transversal –Desarrollo de procesos de investigación efectivos, teniendo en cuenta situaciones de orden social y productivo",
+                "resultados": [
+                  {"ra": "Analizar el contexto productivo según sus características y necesidades", "actividades": [
+                    "Desarrollar actividades relacionadas con: Analizar el contexto productivo según sus características y ",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Transversal – Desarrollo de procesos de investigación efectivos, teniendo en cuenta situaciones de orden social y productivo",
+                "resultados": [
+                  {"ra": "Estructurar el proyecto de acuerdo a criterios de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Estructurar el proyecto de acuerdo a criterios de la investi",
+                  ]},
+                  {"ra": "Argumentar aspectos teóricos del proyecto según referentes nacionales e internacionales", "actividades": [
+                    "Desarrollar actividades relacionadas con: Argumentar aspectos teóricos del proyecto según referentes n",
+                  ]},
+                  {"ra": "Proponer soluciones a las necesidades del contexto según resultados de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Proponer soluciones a las necesidades del contexto según res",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+            ]},
+          },
+          "Ejecución": {
+            "Desarrollar el proceso de manipulación de los ítems de acuerdo a las especificaciones y requerimientos de la organización.": {"competencias": [
+              {
+                "nombre": "Manipulación de ítems",
+                "resultados": [
+                  {"ra": "Recepcionar ítems de acuerdo con procedimiento técnico.", "actividades": [
+                    "Diligenciar formatos y listas de verificación para el proceso de recepción de ítems, de acuerdo con instructivos y procedimientos",
+                  ]},
+                  {"ra": "Preservar ítems de acuerdo con procedimiento o recomendaciones del fabricante", "actividades": [
+                    "Reconocer las condiciones de almacenamiento, preservación y transporte de ítems de acuerdo con su lista de verificación",
+                  ]},
+                  {"ra": "Entregar ítems de acuerdo con procedimientos técnicos, y/o protocolo", "actividades": [
+                    "Diligenciat la lista de verificación y acta de entrega del proceso de entrega del ítem, de acuerdo con los instructivos y procedimientos",
+                  ]},
+                ],
+                "hD": 18, "hI": 6
+              },
+            ]},
+            "Ejecutar procedimientos de medición según las especificaciones dadas por normatividad y requerimientos específicos de los dispositivos": {"competencias": [
+              {
+                "nombre": "Preparación de condiciones del laboratorio",
+                "resultados": [
+                  {"ra": "Preparar equipos y dispositivos de medición según procedimientos técnicos", "actividades": [
+                    "Realizar el alistamiento, preparación  y registro de los dispositivos de medición de acuerdo con instructivos y procedimientos.",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+              {
+                "nombre": "Operación  instrumentos de medida",
+                "resultados": [
+                  {"ra": "Alistar equipos de medición teniendo en cuenta procedimientos técnicos", "actividades": [
+                    "Desarrollar actividades relacionadas con: Alistar equipos de medición teniendo en cuenta procedimiento",
+                  ]},
+                  {"ra": "Efectuar mediciones de longitud en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones de longitud en procesos y productos segú",
+                  ]},
+                  {"ra": "Efectuar mediciones de volumen en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones de volumen en procesos y productos según",
+                  ]},
+                  {"ra": "Efectuar mediciones de masa en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones de masa en procesos y productos según no",
+                  ]},
+                  {"ra": "Efectuar mediciones de presión en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones de presión en procesos y productos según",
+                  ]},
+                  {"ra": "Efectuar mediciones de temperatura en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones de temperatura en procesos y productos s",
+                  ]},
+                  {"ra": "Efectuar mediciones eléctricas en procesos y productos según normatividad vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar mediciones eléctricas en procesos y productos según",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Control de calidad de procesos de medición",
+                "resultados": [
+                  {"ra": "Aplicar métodos de medición de acuerdo con los requisitos de medición del proceso", "actividades": [
+                    "Desarrollar actividades relacionadas con: Aplicar métodos de medición de acuerdo con los requisitos de",
+                  ]},
+                ],
+                "hD": 108, "hI": 36
+              },
+              {
+                "nombre": "Transversal - Ejercer derechos fundamentales del trabajo en el marco de la constitución política y los convenios internacionales",
+                "resultados": [
+                  {"ra": "Valorar la importancia de la ciudadanía laboral con base en el estudio de los derechos humanos y fundamentales en el trabajo", "actividades": [
+                    "Desarrollar actividades relacionadas con: Valorar la importancia de la ciudadanía laboral con base en ",
+                  ]},
+                  {"ra": "Reconocer el trabajo como factor de movilidad social y transformación vital con referencia a la fenomenología y a los derechos fundamentales en el trabajo", "actividades": [
+                    "Desarrollar actividades relacionadas con: Reconocer el trabajo como factor de movilidad social y trans",
+                  ]},
+                  {"ra": "Practicar los derechos fundamentales en el trabajo de acuerdo con la constitución política y los convenios internacionales", "actividades": [
+                    "Desarrollar actividades relacionadas con: Practicar los derechos fundamentales en el trabajo de acuerd",
+                  ]},
+                  {"ra": "Participar en acciones solidarias teniendo en cuenta el ejercicio de los derechos humanos, de los pueblos y de la naturaleza", "actividades": [
+                    "Desarrollar actividades relacionadas con: Participar en acciones solidarias teniendo en cuenta el ejer",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+            ]},
+            "Desarrollar el proceso de confirmación metrológica de los dispositivos de medición con base en los métodos propuestos por organismos nacionales e internacionales de metrología": {"competencias": [
+              {
+                "nombre": "Calibración de ítems",
+                "resultados": [
+                  {"ra": "Preparar ítem bajo prueba para calibración según requisitos establecidos.", "actividades": [
+                    "Prepar el dispositivo a calibrar acondicionandolo y realizando el alistamiento de patrones de acuerdo con los requisitos del procedimiento",
+                  ]},
+                  {"ra": "Preparar patrones y materiales de referencia de acuerdo con los requisitos del proceso", "actividades": [
+                    "Prepar el dispositivo a calibrar acondicionandolo y realizando el alistamiento de patrones de acuerdo con los requisitos del procedimiento",
+                  ]},
+                  {"ra": "Tomar datos de calibración según procedimiento técnico.", "actividades": [
+                    "Establecer la información necesaria para el  análisis de acuerdo con los datos de calibración obtenidos.",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+              {
+                "nombre": "Clave – Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el marco común europeo de referencia para las lenguas",
+                "resultados": [
+                  {"ra": "Implementar acciones de mejora relacionadas con el uso de expresiones, estructuras y desempeño según los resultados de aprendizaje formulados para el programa.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Implementar acciones de mejora relacionadas con el uso de ex",
+                  ]},
+                  {"ra": "Explicar las funciones de su ocupación laboral usando expresiones de acuerdo al nivel requerido por el programa de formación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Explicar las funciones de su ocupación laboral usando expres",
+                  ]},
+                ],
+                "hD": 48, "hI": 16
+              },
+              {
+                "nombre": "Transversal - Interactuar en el contexto productivo y social de acuerdo con principios éticos para la construcción de una cultura de paz",
+                "resultados": [
+                  {"ra": "Promover mi dignidad y la del otro a partir de los principios y valores éticos como aporte en la instauración de una cultura de paz", "actividades": [
+                    "Desarrollar actividades relacionadas con: Promover mi dignidad y la del otro a partir de los principio",
+                  ]},
+                  {"ra": "Establecer relaciones de crecimiento personal y comunitario a partir del bien común como aporte para el desarrollo social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Establecer relaciones de crecimiento personal y comunitario ",
+                  ]},
+                  {"ra": "Promover el uso racional de los recursos naturales a partir de criterios de sostenibilidad y sustentabilidad ética y normativa vigente", "actividades": [
+                    "Desarrollar actividades relacionadas con: Promover el uso racional de los recursos naturales a partir ",
+                  ]},
+                  {"ra": "Contribuir con el fortalecimiento de la cultura de paz a partir de la dignidad humana y las estrategias para la transformación de conflictos", "actividades": [
+                    "Desarrollar actividades relacionadas con: Contribuir con el fortalecimiento de la cultura de paz a par",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Transversal - Implementar hábitos saludables mediante la actividad física, de conformidad con las exigencias del perfil idóneo de egreso",
+                "resultados": [
+                  {"ra": "Desarrollar habilidades psicomotrices en el contexto productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Desarrollar habilidades psicomotrices en el contexto product",
+                  ]},
+                  {"ra": "Practicar hábitos saludables mediante la aplicación de fundamentos de nutrición e higiene.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Practicar hábitos saludables mediante la aplicación de funda",
+                  ]},
+                  {"ra": "Ejecutar actividades de acondicionamiento físico orientadas hacia el mejoramiento de la condición física en los contextos productivo y social", "actividades": [
+                    "Desarrollar actividades relacionadas con: Ejecutar actividades de acondicionamiento físico orientadas ",
+                  ]},
+                  {"ra": "Implementar un plan de Ergonomía y Pausas Activas según las características de la función productiva.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Implementar un plan de Ergonomía y Pausas Activas según las ",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+            ]},
+          },
+          "Evaluación": {
+            "Analizar la información de los componentes del sistema de gestión metrológica en una industria manufacturera, de acuerdo con la normatividad vigente.": {"competencias": [
+              {
+                "nombre": "Calibración de ítems",
+                "resultados": [
+                  {"ra": "Evaluar datos de calibración de acuerdo con los requisitos técnicos.", "actividades": [
+                    "Generar el informe del proceso de calibración incluyendo la estimación de la incertidumbre de acuerdo con los requesitos técnicos y normativos.",
+                  ]},
+                ],
+                "hD": 72, "hI": 24
+              },
+            ]},
+            "Evaluar el proceso de implementación del sistema de gestión de las mediciones, de acuerdo a los requisitos establecidos en la normatividad vigente": {"competencias": [
+              {
+                "nombre": "Preparación de condiciones del laboratorio",
+                "resultados": [
+                  {"ra": "Controlar condiciones del Laboratorio o sitio de medición de acuerdo con procedimientos técnicos", "actividades": [
+                    "Reconocer las condiciones ambientales necesarias para el proceso de medición de acuerdo con los requerimientos técnicos y la normativa técnica y ambiental.",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Verificación de condiciones metrológicas",
+                "resultados": [
+                  {"ra": "Confirmar características metrológicas según procedimiento técnico", "actividades": [
+                    "Desarrollar actividades relacionadas con: Confirmar características metrológicas según procedimiento t",
+                  ]},
+                ],
+                "hD": 36, "hI": 12
+              },
+              {
+                "nombre": "Control de calidad de procesos de medición",
+                "resultados": [
+                  {"ra": "Evaluar el cumplimiento de las especificaciones del proceso y el producto de acuerdo con normativa vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Evaluar el cumplimiento de las especificaciones del proceso ",
+                  ]},
+                  {"ra": "Auditar sistema de gestión de acuerdo con procedimientos técnicos y normativa vigente.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Auditar sistema de gestión de acuerdo con procedimientos téc",
+                  ]},
+                  {"ra": "Proponer acciones de mejora continua para el proceso o el producto de acuerdo con resultados del sistema de gestión.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Proponer acciones de mejora continua para el proceso o el pr",
+                  ]},
+                ],
+                "hD": 108, "hI": 36
+              },
+              {
+                "nombre": "Transversal - Emplear elementos de cultura emprendedora y empresarial de acuerdo con los contextos productivos, social y personal",
+                "resultados": [
+                  {"ra": "Integrar elementos de la cultura emprendedora teniendo en cuenta el perfil personal y el contexto de desarrollo social", "actividades": [
+                    "Desarrollar actividades relacionadas con: Integrar elementos de la cultura emprendedora teniendo en cu",
+                  ]},
+                  {"ra": "Caracterizar la idea de negocio teniendo en cuenta las oportunidades y necesidades del sector productivo y social", "actividades": [
+                    "Desarrollar actividades relacionadas con: Caracterizar la idea de negocio teniendo en cuenta las oport",
+                  ]},
+                  {"ra": "Estructurar el plan de negocio de acuerdo con las características empresariales y tendencias de mercado", "actividades": [
+                    "Desarrollar actividades relacionadas con: Estructurar el plan de negocio de acuerdo con las caracterís",
+                  ]},
+                  {"ra": "Valorar la propuesta de negocio conforme con su estructura y necesidades del sector productivo y social", "actividades": [
+                    "Desarrollar actividades relacionadas con: Valorar la propuesta de negocio conforme con su estructura y",
+                  ]},
+                ],
+                "hD": 9, "hI": 3
+              },
+              {
+                "nombre": "Resultado de aprendizaje etapa practica",
+                "resultados": [
+                  {"ra": "Resultados de aprendizaje etapa practica", "actividades": [
+                    "Desarrollar actividades relacionadas con: Resultados de aprendizaje etapa practica",
+                  ]},
+                ],
+                "hD": 864, "hI": 3
+              },
+            ]},
+            "Desarrollar el proceso de confirmación metrológica de los dispositivos de medición con base en los métodos propuestos por organismos nacionales e internacionales de metrología": {"competencias": [
+              {
+                "nombre": "Control de calidad de procesos de medición",
+                "resultados": [
+                  {"ra": "Efectuar seguimiento al aseguramiento de la validez de los resultados de medición de acuerdo con las normas vigentes.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Efectuar seguimiento al aseguramiento de la validez de los r",
+                  ]},
+                ],
+                "hD": 144, "hI": 48
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+  ,
+  "223206 - MANTENIMIENTO MECANICO INDUSTRIAL": {
+    "proyectos": {
+      "2452016 - GESTIÓN OPERATIVA DEL MANTENIMIENTO PARA MAQUINARIA, EQUIPOS E INSTALACIONES DEL CENTRO DE FORMACIÓN": {
+        "nombre_completo": "2452016 - GESTIÓN OPERATIVA DEL MANTENIMIENTO PARA MAQUINARIA, EQUIPOS E INSTALACIONES DEL CENTRO DE FORMACIÓN",
+        "fases": {
+          "ANALISIS": {
+            "Contextualización de la formación profesional integral.": {"competencias": [
+              {
+                "nombre": "Inducciòn",
+                "resultados": [
+                  {"ra": "Identificar la dinámica organizacional del SENA y el rol de la Formación Profesional Integral de acuerdo con su proyecto de vida y el desarrollo profesional.", "actividades": [
+                    "De acuerdo con la programación definida por el equipo de bienestar y el centro de formación",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Reconocer el funcionamiento de subsistemas electromecánicos de equipos y máquinas de acuerdo con procedimientos técnicos": {"competencias": [
+              {
+                "nombre": "Razonar cuantitativamente frente a situaciones susceptibles de ser abordadas de manera matemática en contextos laborales, sociales y personales",
+                "resultados": [
+                  {"ra": "1. 'Identificar modelos matemáticos de acuerdo con los requerimientos del problema planteado en contextos sociales y productivo.", "actividades": [
+                    "-Taller resuelto sobre conversión de unidades en la solución de problemas -Respuesta a pregunta sobre perímetros, áreas y volúmenes de acuerdo con los elementos de la figura geométrica -Aplica procedimientos aritméticos y algebraicos según el problema planteado -Presenta solución a problemas mediante figuras geométricas -Taller resuelto sobre uso de cálculos aritméticos y analíticos en la solución de problemas -Presentación de conceptos aplicables en el proyecto formativo",
+                  ]},
+                  {"ra": "2 Plantear problemas matemáticos a partir de situaciones generadas en el contexto social y productivo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2 Plantear problemas matemáticos a partir de situaciones gen",
+                  ]},
+                  {"ra": "3 Resolver problemas matemáticos a partir de situaciones generadas en el contexto social y productivo", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3 Resolver problemas matemáticos a partir de situaciones gen",
+                  ]},
+                  {"ra": "4 Proponer acciones de mejora frente a los resultados de los procedimientos matemáticos de acuerdo con el problema planteado", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4 Proponer acciones de mejora frente a los resultados de los",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "INTERACTUAR EN LENGUA INGLESA DE FORMA ORAL Y ESCRITA DENTRO DE CONTEXTOS SOCIALES Y LABORALES SEGÚN LOS CRITERIOS ESTABLECIDOS POR EL MARCO COMÚN EUROPEO DE REFERENCIA PARA LAS LENGUAS.",
+                "resultados": [
+                  {"ra": "1. Comprender información sobre situaciones cotidianas y laborales actuales y futuras a través de interacciones sociales de forma oral y escrita.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Comprender información sobre situaciones cotidianas y lab",
+                  ]},
+                  {"ra": "2. Intercambiar opiniones sobre situaciones cotidianas y laborales actuales, pasadas y futuras en contextos sociales orales y escritos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Intercambiar opiniones sobre situaciones cotidianas y lab",
+                  ]},
+                  {"ra": "03 Discutir sobre posibles soluciones a problemas dentro  de un rango variado de contextos sociales y laborales.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 03 Discutir sobre posibles soluciones a problemas dentro  de",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "4. Implementar acciones de mejora relacionadas con el uso de expresiones, estructuras y desempeño según los resultados de aprendizaje formulados para el programa.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Implementar acciones de mejora relacionadas con el uso de",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+              {
+                "nombre": "Aplicar prácticas de protección ambiental, seguridad y salud en el trabajo de acuerdo con las políticas organizacionales y la normatividad vigente",
+                "resultados": [
+                  {"ra": "1.Analizar las estrategias para la prevención y control de los impactos ambientales y de los accidentes y enfermedades laborales (ATEL) de acuerdo con las políticas organizacionales y el entorno social.", "actividades": [
+                    "Evidencias de Desempeño: Exposiciones sobre riesgos laborales y legislación. Exposición sobre residuos sólidos Dramatizado sobre impactos ambientales  Evidencias de Producto: Matriz de Riesgos Matriz de impacto ambiental.Contexto mundial del medio ambiente y legislación ambiental",
+                  ]},
+                  {"ra": "2 Implementar estrategias para el control de los impactos ambientales y de los accidentes y enfermedades de acuerdo con los planes y programas establecidos por la organización.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2 Implementar estrategias para el control de los impactos am",
+                  ]},
+                  {"ra": "3 Realizar seguimiento y acompañamiento al desarrollo de los planes y programas ambientales y SST, según el área de desempeño.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3 Realizar seguimiento y acompañamiento al desarrollo de los",
+                  ]},
+                  {"ra": "4 Proponer acciones de mejora para el manejo ambiental y el control de la SST, de acuerdo con estrategias de trabajo, colaborativo, cooperativo y coordinado en el contexto productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4 Proponer acciones de mejora para el manejo ambiental y el",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicación de conocimientos de las ciencias naturales de acuerdo con situaciones del contexto productivo y social",
+                "resultados": [
+                  {"ra": "1. Identificar los principios y leyes de la física en la solución de problemas de acuerdo al contexto productivo.", "actividades": [
+                    "Evidencias de Conocimiento : Manejo de unidades del Sistema Internacional de medidas. Evidencias de Desempeño: Manejo de los conceptos básicos sobre propiedades físico-químicas de los gases. Evidencia de producto. Habilidad para transmitir información relacionada con los conceptos básicos sobre los gases combustibles.",
+                  ]},
+                  {"ra": "2. Solucionar problemas asociados con el sector productivos con base en los principios y leyes de la física", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Solucionar problemas asociados con el sector productivos",
+                  ]},
+                  {"ra": "3. Verificar las transformaciones físicas de la materia utilizando herramientas tecnológicas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Verificar las transformaciones físicas de la materia util",
+                  ]},
+                  {"ra": "4. Proponer acciones de mejora en los procesos productivos de acuerdo con los principios y leyes de la física", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Proponer acciones de mejora en los procesos productivos d",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Ejercer derechos fundamentales del trabajo en el marco de la constitución política y los convenios internacionales.",
+                "resultados": [
+                  {"ra": "1. Valorar la importancia de la ciudadanía laboral con base en el estudio de los derechos humanos y fundamentales del trabajo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Valorar la importancia de la ciudadanía laboral con base",
+                  ]},
+                  {"ra": "2. Practicar los derechos fundamentales del trabajo de acuerdo con la Constitución Política y los Convenios Internacionales.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Practicar los derechos fundamentales del trabajo de acuer",
+                  ]},
+                  {"ra": "3. Reconocer el trabajo como uno de los elementos primordiales para la movilidad social y la transformación vital", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Reconocer el trabajo como uno de los elementos primordial",
+                  ]},
+                  {"ra": "4. Participar en acciones solidarias orientadas al ejercicio de los derechos humanos, de los pueblos y de la naturaleza.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Participar en acciones solidarias orientadas al ejercicio",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Generar hábitos saludables de vida mediante la aplicación de programas de  actividad  física  en  los  contextos productivos y sociales",
+                "resultados": [
+                  {"ra": "1. Desarrollar habilidades psicomotrices en el contexto productivo y social.", "actividades": [
+                    "Evidencias de Desempeño: Participación en el encuentro de evaluación de la condición física: ejercicios aeróbicos, anaeróbicos, de fuerza general, de fuerza específica, fortalecer capacidades físicas condicionantes y coordinativas, mejora de postura corporal.  Evidencias de Producto: Evaluación de la condición física – plan de acondicionamiento físico, ficha antropométrica y diagnostica, IMC, plan de acondicionamiento físico y nutricional.",
+                  ]},
+                  {"ra": "2. Practicar hábitos saludables mediante la aplicación de fundamentos de nutrición e higiene.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Practicar hábitos saludables mediante la aplicación de fu",
+                  ]},
+                  {"ra": "3. Ejecutar actividades de acondicionamiento físico orientadas hacia el mejoramiento de la condición física en los contextos productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Ejecutar actividades de acondicionamiento físico orientad",
+                  ]},
+                  {"ra": "4. Implementar un plan de Ergonomía y Pausas Activas según las características de la función 4productiva.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Implementar un plan de Ergonomía y Pausas Activas según l",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Desarrollar procesos de comunicación oral y escritos en forma eficaz y efectiva, teniendo en cuenta situaciones de orden social, personal y productivo.",
+                "resultados": [
+                  {"ra": "1, Analizar los componentes de la comunicación según sus características, intencionalidad y contexto.", "actividades": [
+                    "Aplicar habilidades para comprender, interpretar y evaluar diferentes tipos de texto según requerimientos. Expresar de forma oral y escrita ideas, conceptos y argumentos de acuerdo con las reglas de comunicación asertiva Producir textos escritos de acuerdo con normas y requerimiento del programa de formación.",
+                  ]},
+                  {"ra": "2. Argumentar en forma oral y escrita atendiendo las exigencias y particularidades de las diversas situaciones comunicativas mediante los distintos sistemas de representación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Argumentar en forma oral y escrita atendiendo las exigenc",
+                  ]},
+                  {"ra": "3. Relacionar los procesos comunicativos teniendo en cuenta criterios de lógica y racionalidad", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Relacionar los procesos comunicativos teniendo en cuenta",
+                  ]},
+                  {"ra": "4. Establecer procesos de enriquecimiento lexical y acciones de mejoramiento en el desarrollo de procesos comunicativos según requerimientos del contexto.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Establecer procesos de enriquecimiento lexical y acciones",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicación de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades del entorno",
+                "resultados": [
+                  {"ra": "1. Alistar herramientas de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades de procesamiento de información y comunicación.", "actividades": [
+                    "- Aplicar criterios de diseño y formato para ordenar, estructurar y presentar la información, haciendo uso de diferentes softwares de aplicación '-Operar diferentes softwares de aplicación para la producción de documentos, hojas de cálculo y formatos según requerimientos de cada proyecto formativo.",
+                  ]},
+                  {"ra": "2. Aplicar funcionalidades de herramientas y servicios TIC, de acuerdo con manuales de uso, procedimientos establecidos y buenas prácticas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Aplicar funcionalidades de herramientas y servicios TIC,",
+                  ]},
+                  {"ra": "3. Evaluar los resultados, de acuerdo con los requerimientos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Evaluar los resultados, de acuerdo con los requerimientos",
+                  ]},
+                  {"ra": "4. Optimizar los resultados, de acuerdo con la verificación", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Optimizar los resultados, de acuerdo con la verificación",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en el contexto productivo y social de acuerdo con principios éticos para la construcción de una cultura de paz",
+                "resultados": [
+                  {"ra": "1. Promover mi dignidad y la del otro a partir de los principios y valores éticos como aporte en la instauración de una cultura de paz", "actividades": [
+                    "Aplicar los principios y los valores humanos en el contexto personal, social y productivo según el código de ética profesional Implementar las estrategias y herramientas necesarias para la realización efectiva del trabajo autónomo, colaborativo y en equipo.",
+                  ]},
+                  {"ra": "2. Establecer relaciones de crecimiento personal y comunitario a partir del bien común como aporte para el desarrollo social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Establecer relaciones de crecimiento personal y comunitar",
+                  ]},
+                  {"ra": "3. Promover el uso racional de los recursos naturales a partir de criterios de sostenibilidad y sustentabilidad ética y normativa vigente", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Promover el uso racional de los recursos naturales a part",
+                  ]},
+                  {"ra": "4. Contribuir con el fortalecimiento de la cultura de paz a partir de la dignidad humana y las estrategias para la transformación de conflictos", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Contribuir con el fortalecimiento de la cultura de paz a",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "01. Recuperar elementos mecánicos mediante herramientas de banco y máquinas auxiliares de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Representar  graficamente piezas mecánicas de acuerdo a parámetros técnicos",
+                  ]},
+                  {"ra": "02. Elaborar planos de piezas mecánicas a mano alzada de acuerdo a normas vigentes y especificaciones técnicas.", "actividades": [
+                    "Representar  graficamente piezas mecánicas de acuerdo a parámetros técnicos",
+                  ]},
+                  {"ra": "8. Determinar fallas en sistemas oleo-hidráulicos según  función y especificaciones técnicas", "actividades": [
+                    "Desarrollar actividades relacionadas con: 8. Determinar fallas en sistemas oleo-hidráulicos según  fun",
+                  ]},
+                  {"ra": "07. Determinar fallas en sistemas neumáticos según función y especificaciones técnicas", "actividades": [
+                    "Desarrollar actividades relacionadas con: 07. Determinar fallas en sistemas neumáticos según función y",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+            ]},
+          },
+          "PLANEACION": {
+            "Programar el mantenimiento de equipos, máquinas y sistemas de acuerdo con los requerimientos de mantenimiento asociados al proceso productivo": {"competencias": [
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "03. Elaborar  planos de piezas mecánicas en CAD de acuerdo a normas vigentes y especificaciones técnicas.", "actividades": [
+                    "Representar  graficamente piezas mecánicas de acuerdo a parámetros técnicos",
+                  ]},
+                  {"ra": "04. Recuperar elementos mecánicos mediante torneado de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Desarrollar habilidades recuperando elementos mecanicos con herramientas manuales y maquinas auxiliares de acuerdo a parámetros técnicos Reconocer fisicamente  el torno con sus partes y funciones por medio de ejercicios tipo. Reconstruir elementos mecànicos en el torno de a cuerdo a plano teniendo en cuenta las normas de seguridad y salud en el trabajo, normas medioambientales",
+                  ]},
+                  {"ra": "05. Recuperar elementos mecánicos mediante proceso de  fresado de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Desarrollar habilidades recuperando elementos mecanicos con herramientas manuales y maquinas auxiliares de acuerdo a parámetros técnicos Reconocer fisicamente la maquina fresadora con sus partes y funciones por medio de ejercicios tipo. Reconstruir elementos mecànicos con la fresadora de a cuerdo a plano teniendo en cuenta las normas de seguridad y salud en el trabajo, normas medioambientales",
+                  ]},
+                  {"ra": "06. Unir piezas metálicas mediante soldadura manual por arco eléctrico con electrodos revestido (SMAW) y  soldadura oxiacetilénica (OAW)  de acuerdo a procedimientos técnicos", "actividades": [
+                    "Reconocer los equipos y  elementos de màquinas de soldadura  de a cuerdo a sus funciones y parametros tècnicos. Soldar elementos de màquinas de acuerdo a procedimientos tècnicos y requerimientos de la orden de trabajo",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "Intervención de equipos de acuerdo con técnicas de mantenimiento preventi",
+                "resultados": [
+                  {"ra": "02.   Lubricar el sistema mecánico de acuerdo con parámetros técnicos y normatividad", "actividades": [
+                    "Desarrollar actividades relacionadas con: 02.   Lubricar el sistema mecánico de acuerdo con parámetros",
+                  ]},
+                  {"ra": "03. Elaborar cartas y rutas de lubricación de acuerdo a  requerimientos del sistema tribológico de la maquinaria", "actividades": [
+                    "Desarrollar actividades relacionadas con: 03. Elaborar cartas y rutas de lubricación de acuerdo a  req",
+                  ]},
+                  {"ra": "05. Procesar la información de las actividades de mantenimiento preventivo de acuerdo con las políticas de la empresa", "actividades": [
+                    "Entregar de maquinaria y documentación de acuerdo parametros establecidos",
+                  ]},
+                  {"ra": "06. Intervenir sistemas de maniobra eléctrica para motores según función y especificaciones técnicas", "actividades": [
+                    "Desarrollar actividades relacionadas con: 06. Intervenir sistemas de maniobra eléctrica para motores s",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+          },
+          "Ejecución": {
+            "Coordinar la reparación de componentes  de los equipos y máquinas de acuerdo con la programación de mantenimiento": {"competencias": [
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "10. Restablecer sistema mecánico de acuerdo con especificaciones técnicas.", "actividades": [
+                    "1. Restituir la función de un sistema mecánico teniendo en cuenta parámetros técnicos, normatividad de seguridad y salud en el trabajo y practicas medio ambientales. 2. Establecer los requerimientos de la orden de trabajo y ejecutar los requerimientos de reparación.",
+                  ]},
+                  {"ra": "09 Montar elementos de máquinas de acuerdo a procedimientos técnicos", "actividades": [
+                    "1. Reconocer los elementos de máquinas de a cuerdo con sus funciones y parámetros técnicos. 2. Montar elementos de máquinas de acuerdo con procedimientos técnicos y requerimientos de la orden de trabajo",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "intervencion de equipos de acuerdo con tecnicas de manteniento preventivo.",
+                "resultados": [
+                  {"ra": "07. Intervenir sistemas electroneumáticos de acuerdo a su función y especificaciones técnicas", "actividades": [
+                    "1. Restituir la función de un sistema electroneumático teniendo en cuenta parámetros técnicos, normatividad de seguridad y salud en el trabajo y practicas medio ambientales. 2. Establecer los requerimientos de la orden de trabajo y ejecutar los requerimientos de reparación.",
+                  ]},
+                  {"ra": "01. Ajustar sistemas de máquinas industriales de acuerdo a proceso productivo y especificaciones técnicas.", "actividades": [
+                    "Producto: Informe de cuadro comparativo sobre los tipos de mantenimeinto diferenciado ventajas y desventajas de cada uno. Producto: Define los procedimientos de acuerdo con las normas para almacenar y el tratamiento de residuos de lubricación de acuerdo con las normas ambientales. Conocimiento: Evaluacion de sobre el manejo y la clasificación de residuos de mantenimiento. Producto: Informe de inspeccion, diagnostico de fallas ocultas, operacionales, no operacionales sobre el funcionamiento de sistemas mecánicos y electricos de una maquina herramienta,",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Reparar componentes de los sitemas de manejo de fluidos de los equipos y máquinas de acuerdo con la programación de mantenimiento": {"competencias": [
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "12. Intervenir compresores reciprocantes de acuerdo con especificaciones del fabricante.", "actividades": [
+                    "1.Reconocer los  compresores( rotativos, reciprocantes, turbos)  con sus partes y funciones por medio de ejercicios tipo. 2. Restablecer el funcionamiento de los compresores referidos en la orden de trabajo de acuerdo a parámetros técnicos, y normas de seguridad y salud en el trabajo.",
+                  ]},
+                  {"ra": "13. Reparar fallas y averías en compresores rotativos  de acuerdo con procedimientos técnicos y manual de fabricante.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 13. Reparar fallas y averías en compresores rotativos  de ac",
+                  ]},
+                  {"ra": "14. Ajustar las condiciones de funcionamiento del compresor de acuerdo con especificaciones técnicas", "actividades": [
+                    "Producto: Informe de cuadro comparativo sobre los tipos de mantenimeinto diferenciado ventajas y desventajas de cada uno. Producto: Define los procedimientos de acuerdo con las normas para almacenar y el tratamiento de residuos de lubricación de acuerdo con las normas ambientales. Conocimiento: Evaluacion de sobre el manejo y la clasificación de residuos de mantenimiento. Producto: Informe de inspeccion, diagnostico de fallas ocultas, operacionales, no operacionales sobre el funcionamiento de sistemas mecánicos y electricos de una maquina herramienta,",
+                  ]},
+                  {"ra": "11. Intervenir bombas de desplazamiento positivo (rotativas y reciprocantes) de acuerdo con los resultados del diagnóstico, normativa ocupacional, ambiental y especificaciones técnicas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 11. Intervenir bombas de desplazamiento positivo (rotativas",
+                  ]},
+                  {"ra": "15. Diagnosticar válvula de servicio de estrangulación. (Globo, diafragma, mariposa, compresión) según procedimiento de mantenimiento.", "actividades": [
+                    "1.Reconocer las válvulas (Globo, diafragma, mariposa, compresión, compuerta, macho, bola) con sus partes y funciones por medio de ejercicios tipo. 2. Restituir la función de los sistemas de  válvulas teniendo en cuenta parámetros técnicos, normatividad de seguridad y salud en el trabajo y practicas medio ambientales. 3. Establecer los requerimientos de la orden de trabajo y ejecutar los requerimientos de reparación.",
+                  ]},
+                  {"ra": "16. Diagnosticar válvula de servicio de corte y paso (compuerta, macho, bola según procedimiento de mantenimiento.", "actividades": [
+                    "1-Caracterizar válvulas según especificaciones técnicas 2-Análizar modos y efectos de fallas en válvulas según parámetros 3-Mantener y/o reparar una válvula industrial según manuales técnicos",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "intervencion de equipos de acuerdo con tecnicas de manteniento preventivo.",
+                "resultados": [
+                  {"ra": "09. Intervenir bombas centrifugas de acuerdo con los resultados del diagnóstico, normativa ocupacional, ambiental y especificaciones técnicas.", "actividades": [
+                    "1.Reconocer   las bombas centrifugas, desplazamiento positivo con sus partes y funciones por medio de ejercicios tipo. 2. Restablecer  el funcionamiento de las bombas centrifugas, desplazamiento positivo referidos en la orden de trabajo de a cuerdo a parámetros técnicos, normas de seguridad y salud en el trabajo y medioambientales.",
+                  ]},
+                  {"ra": "10. Ajustar calderas de acuerdo con procedimientos establecidos por el fabricante y normas vigentes", "actividades": [
+                    "1.Reconocer calderas con sus partes y funciones por medio de ejercicios tipo. 2. Restituir la función de los sistemas de calderas teniendo en cuenta parámetros técnicos, normatividad de seguridad y salud en el trabajo y practicas medio ambientales. 3. Establecer los requerimientos de la orden de trabajo y ejecutar los requerimientos de reparación.",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "Desarrollo de procesos de investigación efectivos, teniendo en cuenta situaciones de orden social y productivo",
+                "resultados": [
+                  {"ra": "1. Analizar el contexto productivo según sus características y necesidades", "actividades": [
+                    "-Formular el proyecto de investigación a partir del trabajo en equipo y el diagnóstico inicial -Seleccionar técnicas e instrumentos de evaluación, consultando bases de datos para el análisis de antecedentes -Elaborar el marco teórico del proyecto según búsqueda guiada",
+                  ]},
+                  {"ra": "2. Estructurar el proyecto de acuerdo a criterios de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Estructurar el proyecto de acuerdo a criterios de la inve",
+                  ]},
+                  {"ra": "3. Argumentar aspectos teóricos del proyecto según referentes nacionales e internacionales", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Argumentar aspectos teóricos del proyecto según referente",
+                  ]},
+                  {"ra": "4. Proponer soluciones a las necesidades del contexto según resultados de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Proponer soluciones a las necesidades del contexto según",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+          },
+          "Evaluación": {
+            "Verificar la condición del funcionamiento de  máquinas y equipos de acuerdo con parámetros nominales de operación en procesos productivos": {"competencias": [
+              {
+                "nombre": "Instalación de equipos industriales",
+                "resultados": [
+                  {"ra": "01. Montar equipos industriales de acuerdo con  los parámetros técnicos  y de seguridad.", "actividades": [
+                    "1.Reconocer   los equipos y accesorios de montaje de maquinaria con sus partes y funciones por medio de ejercicios tipo. 2. Instalar equipos y maquinas referidos en la orden de trabajo de acuerdo a procedimientos técnicos, teniendo en la cuenta las normas de salud y seguridad en el trabajo y normas medioambientales. 3. Entregar la máquina funcionando de acuerdo con los parámetros técnicos",
+                  ]},
+                  {"ra": "02. Instalar sistema de izaje de acuerdo con procedimientos técnicos y normatividad vigente.", "actividades": [
+                    "1.Reconocer los equipos y accesorios de izaje con sus partes y funciones por medio de ejercicios tipo. 2. utilizar equipos  de izaje según lo requerido en la orden de trabajo de acuerdo a procedimientos técnicos, teniendo en la cuenta las normas de salud y seguridad en el trabajo y normas medioambientales. 3. Entregar la máquina funcionando de acuerdo con los parámetros técnicos.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "intervencion de equipos de acuerdo con tecnicas de manteniento preventivo.",
+                "resultados": [
+                  {"ra": "04. Predecir las  fallas en equipos de acuerdo con condiciones de operación", "actividades": [
+                    "1.Reconocer   los equipos de mantenimiento predictivo con sus partes y funciones por medio de ejercicios tipo. 2. Determinar  condición de las máquinas y equipos por medio de  técnicas de mantenimiento predictivo referidos en la orden de trabajo de a cuerdo a parámetros técnicos,  teniendo en cuenta las normas de seguridad y salud en el trabajo y normas medioambientales",
+                  ]},
+                  {"ra": "08. Intervenir sistemas electrohidráulicos de acuerdo con su función y especificaciones técnicas.", "actividades": [
+                    "1. Restituir la función de un sistema electrohidráulica teniendo en cuenta parámetros técnicos, normatividad de seguridad y salud en el trabajo y prácticas medio ambientales. 2. Establecer los requerimientos de la orden de trabajo y ejecuta los requerimientos de reparación",
+                  ]},
+                ],
+                "hD": 114, "hI": 0
+              },
+              {
+                "nombre": "Corregir fallas y averías mecánicas",
+                "resultados": [
+                  {"ra": "17. Reparar máquinas eléctricas rotativas de corriente alterna de baja tensión según especificaciones técnicas del fabricante.", "actividades": [
+                    "1.Reconocer los equipos y accesorios de maquinaria rotativa de corriente alterna con sus partes y funciones por medio de ejercicios tipo; reconocer los conceptos y principios de estas. 2. Reparar la maquinas referidos en la orden de trabajo de acuerdo a procedimientos técnicos, teniendo en la cuenta las normas de salud y seguridad en el trabajo y normas medioambientales. 3. Entregar la máquina funcionando de acuerdo con los parámetros técnicos.",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "Etapa practica",
+                "resultados": [
+                  {"ra": "Resultado de aprendizaje etapa práctica", "actividades": [
+                    "Las definidas según la modalidad de etapa práctica seleccionada",
+                  ]},
+                ],
+                "hD": 864, "hI": 0
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+  ,
+  "223213 - MANTENIMIENTO ELECTROMECANICO INDUSTRIAL": {
+    "proyectos": {
+      "2720879 - IMPLEMENTACIÓN DE ACTIVIDADES DE MANTENIMIENTO ELECTROMECÁNICO DE ACUERDO CON LAS NECESIDADES ESPECÍFICAS DE LOS EQUIPOS DEL CENTRO NACIONAL COLOMBO ALEMÁN Y DEMÁS SEDES DEL SENA REGIONAL ATLÁNTICO": {
+        "nombre_completo": "2720879 - IMPLEMENTACIÓN DE ACTIVIDADES DE MANTENIMIENTO ELECTROMECÁNICO DE ACUERDO CON LAS NECESIDADES ESPECÍFICAS DE LOS EQUIPOS DEL CENTRO NACIONAL COLOMBO ALEMÁN Y DEMÁS SEDES DEL SENA REGIONAL ATLÁNTICO",
+        "fases": {
+          "ANÁLISIS": {
+            "Contextualización de la formación profesional integral.": {"competencias": [
+              {
+                "nombre": "Inducciòn",
+                "resultados": [
+                  {"ra": "Identificar la dinámica organizacional del SENA y el rol de la Formación Profesional Integral de acuerdo con su proyecto de vida y el desarrollo profesional.", "actividades": [
+                    "De acuerdo con la programación definida por el equipo de bienestar y el centro de formación",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Recolectar información de la maquinaria y equipo , estableciendo las especificaciones y requerimientos de los equipos,y riesgos de las actividades de mantenimiento.": {"competencias": [
+              {
+                "nombre": "Razonar cuantitativamente frente a situaciones susceptibles de ser abordadas de manera matemática en contextos laborales, sociales y personales",
+                "resultados": [
+                  {"ra": "Identificar modelos matemáticos de acuerdo con los requerimientos del problema planteado en contextos sociales y productivo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: Identificar modelos matemáticos de acuerdo con los requerimi",
+                  ]},
+                  {"ra": "2 Plantear problemas matemáticos a partir de situaciones generadas en el contexto social y productivo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2 Plantear problemas matemáticos a partir de situaciones gen",
+                  ]},
+                  {"ra": "3 Resolver problemas matemáticos a partir de situaciones generadas en el contexto social y productivo", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3 Resolver problemas matemáticos a partir de situaciones gen",
+                  ]},
+                  {"ra": "4 Proponer acciones de mejora frente a los resultados de los procedimientos matemáticos de acuerdo con el problema planteado", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4 Proponer acciones de mejora frente a los resultados de los",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "1. Comprender información sobre situaciones cotidianas y laborales actuales y futuras a través de interacciones sociales de forma oral y escrita.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Comprender información sobre situaciones cotidianas y lab",
+                  ]},
+                  {"ra": "2. Intercambiar opiniones sobre situaciones cotidianas y laborales actuales, pasadas y futuras en contextos sociales orales y escritos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Intercambiar opiniones sobre situaciones cotidianas y lab",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+              {
+                "nombre": "Aplicar prácticas de protección ambiental, seguridad y salud en el trabajo de acuerdo con las políticas organizacionales y la normatividad vigente",
+                "resultados": [
+                  {"ra": "1.Analizar las estrategias para la prevención y control de los impactos ambientales y de los accidentes y enfermedades laborales (ATEL) de acuerdo con las políticas organizacionales y el entorno social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1.Analizar las estrategias para la prevención y control de l",
+                  ]},
+                  {"ra": "2 Implementar estrategias para el control de los impactos ambientales y de los accidentes y enfermedades de acuerdo con los planes y programas establecidos por la organización.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2 Implementar estrategias para el control de los impactos am",
+                  ]},
+                  {"ra": "3 Realizar seguimiento y acompañamiento al desarrollo de los planes y programas ambientales y SST, según el área de desempeño.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3 Realizar seguimiento y acompañamiento al desarrollo de los",
+                  ]},
+                  {"ra": "4 Proponer acciones de mejora para el manejo ambiental y el control de la SST, de acuerdo con estrategias de trabajo, colaborativo, cooperativo y coordinado en el contexto productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4 Proponer acciones de mejora para el manejo ambiental y el",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicación de conocimientos de las ciencias naturales de acuerdo con situaciones del contexto productivo y social",
+                "resultados": [
+                  {"ra": "1. Identificar los principios y leyes de la física en la solución de problemas de acuerdo al contexto productivo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Identificar los principios y leyes de la física en la sol",
+                  ]},
+                  {"ra": "2. Solucionar problemas asociados con el sector productivos con base en los principios y leyes de la física", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Solucionar problemas asociados con el sector productivos",
+                  ]},
+                  {"ra": "3. Verificar las transformaciones físicas de la materia utilizando herramientas tecnológicas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Verificar las transformaciones físicas de la materia util",
+                  ]},
+                  {"ra": "4. Proponer acciones de mejora en los procesos productivos de acuerdo con los principios y leyes de la física", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Proponer acciones de mejora en los procesos productivos d",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Ejercer derechos fundamentales del trabajo en el marco de la constitución política y los convenios internacionales.",
+                "resultados": [
+                  {"ra": "1. Valorar la importancia de la ciudadanía laboral con base en el estudio de los derechos humanos y fundamentales del trabajo.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Valorar la importancia de la ciudadanía laboral con base",
+                  ]},
+                  {"ra": "2. Practicar los derechos fundamentales del trabajo de acuerdo con la Constitución Política y los Convenios Internacionales.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Practicar los derechos fundamentales del trabajo de acuer",
+                  ]},
+                  {"ra": "3. Reconocer el trabajo como uno de los elementos primordiales para la movilidad social y la transformación vital", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Reconocer el trabajo como uno de los elementos primordial",
+                  ]},
+                  {"ra": "4. Participar en acciones solidarias orientadas al ejercicio de los derechos humanos, de los pueblos y de la naturaleza.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Participar en acciones solidarias orientadas al ejercicio",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Implementar hábitos saludables mediante la actividad física, de conformidad con las exigencias del perfil idóneo de egreso",
+                "resultados": [
+                  {"ra": "1. Desarrollar habilidades psicomotrices en el contexto productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Desarrollar habilidades psicomotrices en el contexto prod",
+                  ]},
+                  {"ra": "2. Practicar hábitos saludables mediante la aplicación de fundamentos de nutrición e higiene.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Practicar hábitos saludables mediante la aplicación de fu",
+                  ]},
+                  {"ra": "2. Ejecutar actividades de acondicionamiento físico orientadas hacia el mejoramiento de la condición física en los contextos productivo y social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Ejecutar actividades de acondicionamiento físico orientad",
+                  ]},
+                  {"ra": "3. Implementar un plan de Ergonomía y Pausas Activas según las características de la función productiva.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Implementar un plan de Ergonomía y Pausas Activas según l",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "01. Recuperar elementos mecánicos mediante herramientas de banco y máquinas auxiliares de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Emplear instrumentos de medicion de acuerdo a operación a realizar.  Identificar los recursos para procesos de ajuste mecanico manual. Realizar operaciones mecanica de banco teniendo en cuenta normas  SST   Y ambiental",
+                  ]},
+                  {"ra": "02. Elaborar planos de piezas mecánicas a mano alzada de acuerdo a normas vigentes y especificaciones técnicas.", "actividades": [
+                    "Representar  graficamente piezas mecánicas de acuerdo a parámetros técnicos",
+                  ]},
+                  {"ra": "04. Recuperar elementos mecánicos mediante torneado de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Desarrollar habilidades recuperando elementos mecanicos con herramientas manuales y maquinas auxiliares de acuerdo a parámetros técnicos Reconocer fisicamente  el torno con sus partes y funciones por medio de ejercicios tipo. Reconstruir elementos mecànicos en el torno de a cuerdo a plano teniendo en cuenta las normas de seguridad y salud en el trabajo, normas medioambientales",
+                  ]},
+                  {"ra": "05. Recuperar elementos mecánicos mediante proceso de  fresado de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Desarrollar habilidades recuperando elementos mecanicos con herramientas manuales y maquinas auxiliares de acuerdo a parámetros técnicos Reconocer fisicamente la maquina fresadora con sus partes y funciones por medio de ejercicios tipo. Reconstruir elementos mecànicos con la fresadora de a cuerdo a plano teniendo en cuenta las normas de seguridad y salud en el trabajo, normas medioambientales",
+                  ]},
+                  {"ra": "06. Unir piezas metálicas mediante soldadura manual por arco eléctrico con electrodos revestido (SMAW) y  soldadura oxiacetilénica (OAW)  de acuerdo a procedimientos técnicos", "actividades": [
+                    "Reconocer los equipos y  elementos de màquinas de soldadura  de a cuerdo a sus funciones y parametros tècnicos. Soldar elementos de màquinas de acuerdo a procedimientos tècnicos y requerimientos de la orden de trabajo",
+                  ]},
+                  {"ra": "07. Intervenir sistemas de maniobra eléctrica para motores según  función y especificaciones técnicas", "actividades": [
+                    "Reconocer los elmentos electricos de màquinas de a cuerdo a sus funciones y parametros tècnicos. Montar elementos electricos de màquinas de acuerdo a procedimientos tècnicos y requerimientos de la orden de trabajo",
+                  ]},
+                  {"ra": "12. Montar y desmontar   elementos de máquinas de acuerdo a procedimientos técnicos", "actividades": [
+                    "Identificar subsistemas de maquinaria industrial Reconocer los elementos de màquinas de a cuerdo a sus funciones y parametros tècnicos. Montar elementos de màquinas de acuerdo a procedimientos tècnicos y requerimientos de la orden de trabajo",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+            ]},
+          },
+          "PLANEACIÓN": {
+            "Planear el mantenimiento de los sistemas mecánicos según especificaciones técnicas.": {"competencias": [
+              {
+                "nombre": "Emplear elementos de cultura emprendedora y empresarial de acuerdo con los contextos productivos, social y personal",
+                "resultados": [
+                  {"ra": "1. Integrar elementos de la cultura emprendedora teniendo en cuenta el perfil personal y el contexto de desarrollo social", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Integrar elementos de la cultura emprendedora teniendo en",
+                  ]},
+                  {"ra": "2. Caracterizar la idea de negocio teniendo en cuenta las oportunidades y necesidades del sector productivo y social", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Caracterizar la idea de negocio teniendo en cuenta las op",
+                  ]},
+                  {"ra": "3. Estructurar el plan de negocio de acuerdo con las características empresariales y tendencias de mercado", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Estructurar el plan de negocio de acuerdo con las caracte",
+                  ]},
+                  {"ra": "3. Valorar la propuesta de negocio conforme con su estructura y necesidades del sector productivo y social", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Valorar la propuesta de negocio conforme con su estructur",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicación de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades del entorno",
+                "resultados": [
+                  {"ra": "1. Alistar herramientas de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades de procesamiento de información y comunicación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Alistar herramientas de tecnologías de la información y l",
+                  ]},
+                  {"ra": "2. Aplicar funcionalidades de herramientas y servicios TIC, de acuerdo con manuales de uso, procedimientos establecidos y buenas prácticas.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Aplicar funcionalidades de herramientas y servicios TIC,",
+                  ]},
+                  {"ra": "3. Evaluar los resultados, de acuerdo con los requerimientos.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Evaluar los resultados, de acuerdo con los requerimientos",
+                  ]},
+                  {"ra": "4. Optimizar los resultados, de acuerdo con la verificación", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Optimizar los resultados, de acuerdo con la verificación",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "3. Discutir sobre posibles soluciones a problemas dentro  de un rango variado de contextos sociales y laborales. 4. Implementar acciones de mejora relacionadas con el uso de expresiones, estructuras y desempeño según los resultados de aprendizaje formulados para el programa.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Discutir sobre posibles soluciones a problemas dentro  de",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en el contexto productivo y social de acuerdo con principios éticos para la construcción de una cultura de paz",
+                "resultados": [
+                  {"ra": "1. Promover mi dignidad y la del otro a partir de los principios y valores éticos como aporte en la instauración de una cultura de paz", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Promover mi dignidad y la del otro a partir de los princi",
+                  ]},
+                  {"ra": "2. Establecer relaciones de crecimiento personal y comunitario a partir del bien común como aporte para el desarrollo social.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Establecer relaciones de crecimiento personal y comunitar",
+                  ]},
+                  {"ra": "3. Promover el uso racional de los recursos naturales a partir de criterios de sostenibilidad y sustentabilidad ética y normativa vigente", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Promover el uso racional de los recursos naturales a part",
+                  ]},
+                  {"ra": "4. Contribuir con el fortalecimiento de la cultura de paz a partir de la dignidad humana y las estrategias para la transformación de conflictos", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Contribuir con el fortalecimiento de la cultura de paz a",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Desarrollo de procesos de investigación efectivos, teniendo en cuenta situaciones de orden social y productivo",
+                "resultados": [
+                  {"ra": "1. Analizar el contexto productivo según sus características y necesidades", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1. Analizar el contexto productivo según sus características",
+                  ]},
+                  {"ra": "2. Estructurar el proyecto de acuerdo a criterios de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Estructurar el proyecto de acuerdo a criterios de la inve",
+                  ]},
+                  {"ra": "3. Argumentar aspectos teóricos del proyecto según referentes nacionales e internacionales", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Argumentar aspectos teóricos del proyecto según referente",
+                  ]},
+                  {"ra": "4. Proponer soluciones a las necesidades del contexto según resultados de la investigación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Proponer soluciones a las necesidades del contexto según",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Desarrollar procesos de comunicación oral y escritos en forma eficaz y efectiva, teniendo en cuenta situaciones de orden social, personal y productivo.",
+                "resultados": [
+                  {"ra": "1, Analizar los componentes de la comunicación según sus características, intencionalidad y contexto.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 1, Analizar los componentes de la comunicación según sus car",
+                  ]},
+                  {"ra": "2. Argumentar en forma oral y escrita atendiendo las exigencias y particularidades de las diversas situaciones comunicativas mediante los distintos sistemas de representación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 2. Argumentar en forma oral y escrita atendiendo las exigenc",
+                  ]},
+                  {"ra": "3. Relacionar los procesos comunicativos teniendo en cuenta criterios de lógica y racionalidad", "actividades": [
+                    "Desarrollar actividades relacionadas con: 3. Relacionar los procesos comunicativos teniendo en cuenta",
+                  ]},
+                  {"ra": "4. Establecer procesos de enriquecimiento lexical y acciones de mejoramiento en el desarrollo de procesos comunicativos según requerimientos del contexto.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 4. Establecer procesos de enriquecimiento lexical y acciones",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "08. Determinar fallas en sistemas neumáticos según función y especificaciones técnicas", "actividades": [
+                    "Reconocer fallas en sistemas oleohidráulicos y neumáticos de acuerdo a parametros técnicos Restituir la funcion de un sistema teniendo en cuenta parametros tecnicos, normatividad de saguridad y salud en el trabajo y practicas medio ambientales.                              Establecer los requerimientos de la orden de trabajo y ejecuta los requerimientos de reparacion",
+                  ]},
+                  {"ra": "10. Determinar fallas en sistemas oleo-hidráulicos según  función y especificaciones técnicas", "actividades": [
+                    "Desarrollar actividades relacionadas con: 10. Determinar fallas en sistemas oleo-hidráulicos según  fu",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Intervención de equipos de acuerdo con técnicas de mantenimiento preventivo",
+                "resultados": [
+                  {"ra": "01. Ajustar sistemas de máquinas industriales de acuerdo a proceso productivo y especificaciones técnicas.", "actividades": [
+                    "Programar actividades de mantenimiento autónomo de acuerdo a las especificaciones del fabricante Reconecer procedimientos tribologicos de a cuerdo a parametros técnicos. Lubricar los sitemas de máquinas y equipos de acuerdo a los requerimientos del fabricante y normas mediambientales  de seguridad,  salud en el trabajo .  Reconocer procedimientos para elaboraciòn de cartas y rutas de lubricaciòn de acuerdo con los manuales del fabricante.   Restablecer el funcionamiento de los sistemas de máquina industriales referidos en la orden de trabajo de a cuerdo a paramestros tecnicos,y normas de seguridad y salud en el trabajo.",
+                  ]},
+                  {"ra": "02.   Lubricar el sistema mecánico de acuerdo con parámetros técnicos y normatividad", "actividades": [
+                    "Programar actividades de mantenimiento autónomo de acuerdo a las especificaciones del fabricante Reconecer procedimientos tribologicos de a cuerdo a parametros técnicos. Lubricar los sitemas de máquinas y equipos de acuerdo a los requerimientos del fabricante y normas mediambientales  de seguridad,  salud en el trabajo .  Reconocer procedimientos para elaboraciòn de cartas y rutas de lubricaciòn de acuerdo con los manuales del fabricante.   Restablecer el funcionamiento de los sistemas de máquina industriales referidos en la orden de trabajo de a cuerdo a paramestros tecnicos,y normas de seguridad y salud en el trabajo.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+          },
+          "Ejecución": {
+            "Montar equipos e instalaciones": {"competencias": [
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "03. Elaborar  planos de piezas mecánicas en CAD de acuerdo a normas vigentes y especificaciones técnicas.", "actividades": [
+                    "Reconocer el software de diseño y sus herramientas a partir de ejercicios tipos. Representar graficamente e interpretar planos de componentes de màquinas a partir de la utilizaion del software CAD, bajo los criterios de la normatividad.",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+              {
+                "nombre": "Intervención de equipos de acuerdo con técnicas de mantenimiento preventivo",
+                "resultados": [
+                  {"ra": "05. Procesar la información de las actividades de mantenimiento preventivo de acuerdo con las políticas de la empresa", "actividades": [
+                    "Entregar de maquinaria y documentación de acuerdo parametros establecidos",
+                  ]},
+                  {"ra": "03. Elaborar cartas y rutas de lubricación de acuerdo a  requerimientos del sistema tribológico de la maquinaria", "actividades": [
+                    "Elaborar carta de lubricacion y establecer ruta.",
+                  ]},
+                ],
+                "hD": 152, "hI": 0
+              },
+              {
+                "nombre": "Instalación de redes eléctricas industriales de baja tensión.",
+                "resultados": [
+                  {"ra": "01. Realizar planos y memorias de cálculo para ejecutar la obra eléctrica de acuerdo con diseño propuesto", "actividades": [
+                    "Realizar Plano eléctrico de la instalación Industrial. Realizar memorias de cálculo de la instalación Industrial",
+                  ]},
+                  {"ra": "02.   Realizar el cableado de la red eléctrica interna y Tablero de distribución de acuerdo al diseño, cumpliendo normatividad vigente.", "actividades": [
+                    "Realizar cableado de la red Interna  según diseño eléctrico y normatividad vigente. Realizar cableado del tablero eléctrico según dieseño y normatividad vigente",
+                  ]},
+                  {"ra": "03. Realizar instalación de elementos eléctricos y accesorios según la infraestructura y diseño eléctrico..", "actividades": [
+                    "Instalar redes eléctricas de baja tensión de acuerdo a la normatividad vigente",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "INSTALACION DE EQUIPOS INDUSTRIALES SEGÚN PROCEDIMIENTOS TECNICOS",
+                "resultados": [
+                  {"ra": "01.   Montar equipos industriales de acuerdo con  los parámetros técnicos  y de seguridad.", "actividades": [
+                    "Reconocer los equipos y accesorios de montaje de maquinaria con sus partes y funciones por medio de ejercicios tipo. Instalar equipos y maquinas referidos en la orden de trabajo de acuerdo a procedimientos técnicos, teniendo en la cuenta las normas de salud y seguridad en el trabajo y normas mediambientales Entregar la máquina funcionando de acuerdo con los parametros tecnicos Realizar procedimiento que permita prevenir distintas situaciones que se puedan prestar durante el izaje de cargas, transporte y almacenamiento.",
+                  ]},
+                  {"ra": "02.   Instalar sistema de izaje de acuerdo con procedimientos técnicos y normatividad vigente.", "actividades": [
+                    "1.Reconocer los equipos y accesorios de izaje con sus partes y funciones por medio de ejercicios tipo. 2. utilizar equipos  de izaje según lo requerido en la orden de trabajo de acuerdo a procedimientos técnicos, teniendo en la cuenta las normas de salud y seguridad en el trabajo y normas medioambientales. 3. Entregar la máquina funcionando de acuerdo con los parámetros técnicos.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Reparacion de sistemas de control eléctrico en maquinaria y equipo industrial",
+                "resultados": [
+                  {"ra": "02. Instalar sistemas de control según diseño establecido verificando su funcionamiento y configuración de acuerdo a criterios técnicos y normatividad vigente.", "actividades": [
+                    "Verificar el funcionamiento del sistema de control de acuerdo a los parametros establecidos",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Ejecutar las acciones de matenimiento preventivo y  correctivo": {"competencias": [
+              {
+                "nombre": "Corrección de fallas y averías en sistemas mecánicos",
+                "resultados": [
+                  {"ra": "09. Intervenir sistemas electroneumáticos de acuerdo a su función y especificaciones técnicas", "actividades": [
+                    "Realizar mantenimiento en sistemas de control electroneumáticos y electrohidraúlicos  Restituir la funcion de un sistema teniendo en cuenta parametros tecnicos, normatividad de saguridad y salud en el trabajo y practicas medio ambientales.                              Establecer los requerimientos de la orden de trabajo y ejecuta los requerimientos de reparacion",
+                  ]},
+                  {"ra": "11. Intervenir sistemas electrohidráulicos de acuerdo con su función y especificaciones técnicas.", "actividades": [
+                    "Realizar mantenimiento en sistemas de control electroneumáticos y electrohidraúlicos  Restituir la funcion de un sistema teniendo en cuenta parametros tecnicos, normatividad de saguridad y salud en el trabajo y practicas medio ambientales.                              Establecer los requerimientos de la orden de trabajo y ejecuta los requerimientos de reparacion",
+                  ]},
+                  {"ra": "13. Restablecer sistema mecánico de acuerdo a especificaciones técnicas.", "actividades": [
+                    "Restituir la funcion de un sistema mecànicos teniendo en cuenta parametros tecnicos, normatividad de saguridad y salud en el trabajo y practicas medio ambientales.                               Establecer los requerimientos de la orden de trabajo y ejecuta los requerimientos de reparacion",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Reparación de máquinas eléctricas de baja tensión.",
+                "resultados": [
+                  {"ra": "01.   Reparar máquinas eléctricas rotativas de Corriente Continua de baja tensión según especificaciones técnicas del fabricante.", "actividades": [
+                    "Entregar máquinas eléctricas reparadas según orden de trabajo",
+                  ]},
+                  {"ra": "02.   Reparar máquinas eléctricas rotativas de Corriente Alterna de baja tensión según especificaciones técnicas del fabricante.", "actividades": [
+                    "Entregar máquinas eléctricas reparadas según orden de trabajo",
+                  ]},
+                  {"ra": "03.   Reparar máquinas eléctricas Estacionarias de baja tensión según especificaciones técnicas del fabricante.", "actividades": [
+                    "Entregar máquinas eléctricas reparadas según orden de trabajo",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Reparacion de sistemas de control eléctrico en maquinaria y equipo industrial",
+                "resultados": [
+                  {"ra": "01, Determinar el funcionamiento y las aplicaciones de los circuitos electrónicos", "actividades": [
+                    "Reconocer el funcionamiento de los elementos electrónicos que componen una fuente de voltaje de corriente alterna y continua",
+                  ]},
+                  {"ra": "03.   Mantener preventivamente sistemas de control eléctrico de maquinaria industrial teniendo en cuenta procedimientos técnicos, normativa de salud y seguridad industrial y ambiente.", "actividades": [
+                    "Ejecutar acciones para mantener sistemas de control eléctrico de acuerdo a normatividad vigente",
+                  ]},
+                  {"ra": "04.   Diagnosticar fallas y averías en los sistemas de control de máquinas industriales según procedimientos y protocolos.", "actividades": [
+                    "Detectar y diagnosticar fallas o averias para mantener sistemas de control eléctrico de acuerdo a normatividad vigente",
+                  ]},
+                  {"ra": "05.   Reparar fallas y averías en sistemas de control eléctrico de lógica cableada, según requerimientos técnicos.", "actividades": [
+                    "Ejecutar acciones para mantener sistemas de control eléctrico de acuerdo a normatividad vigente",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+            ]},
+          },
+          "Evaluación": {
+            "Ejecutar las acciones de matenimiento basado en condición": {"competencias": [
+              {
+                "nombre": "Intervención de equipos de acuerdo con técnicas de mantenimiento preventivo",
+                "resultados": [
+                  {"ra": "04. Predecir las  fallas en equipos de acuerdo a condiciones de operación", "actividades": [
+                    "1. Determinar los equipos que serán incluidos en el programa de mantenimiento predictivo y definir la técnica predictiva a utilizar  2. Diagnosticar el estado de los equipos  de acuerdo con los parámetros de funcionamiento  3. Identificar la causa  de la desviación en el valor de las variables de funcionamiento del equipo y proponer alternativas de solución\"",
+                  ]},
+                ],
+                "hD": 114, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "05 Presentar un proceso para la realización de una actividad en su quehacer laboral de acuerdo con los procedimientos establecidos desde su programa de formación.", "actividades": [
+                    "Desarrollar actividades relacionadas con: 05 Presentar un proceso para la realización de una actividad",
+                  ]},
+                  {"ra": "6. Explicar las funciones de su ocupación laboral usando expresiones de acuerdo al nivel requerido por el programa de formación", "actividades": [
+                    "Desarrollar actividades relacionadas con: 6. Explicar las funciones de su ocupación laboral usando exp",
+                  ]},
+                ],
+                "hD": 77, "hI": 0
+              },
+            ]},
+            "Etapa productiva": {"competencias": [
+              {
+                "nombre": "RESULTADOS DE APRENDIZAJE ETAPA PRACTICA",
+                "resultados": [
+                  {"ra": "6. Explicar las funciones de su ocupación laboral usando expresiones de acuerdo al nivel requerido por el programa de formación", "actividades": [
+                    "Desarrollar actividades relacionadas con: 6. Explicar las funciones de su ocupación laboral usando exp",
+                  ]},
+                ],
+                "hD": 864, "hI": 0
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+  ,
+  "837101 - MECANICA DE MAQUINARIA INDUSTRIAL": {
+    "proyectos": {
+      "1952488 - DISEÑO E IMPLEMENTACIÓN DE UN PROGRAMA DE MANTENIMIENTO MECÁNICO INDUSTRIAL, PARA OPTIMIZAR LAS ACTIVIDADES ASIGNADAS AL TÉCNICO Y GARANTIZAR EL CORRECTO FUNCIONAMIENTO DE MÁQUINAS, EQUIPOS E INSTALACIONES": {
+        "nombre_completo": "1952488 - DISEÑO E IMPLEMENTACIÓN DE UN PROGRAMA DE MANTENIMIENTO MECÁNICO INDUSTRIAL, PARA OPTIMIZAR LAS ACTIVIDADES ASIGNADAS AL TÉCNICO Y GARANTIZAR EL CORRECTO FUNCIONAMIENTO DE MÁQUINAS, EQUIPOS E INSTALACIONES",
+        "fases": {
+          "Planeación": {
+            "Diagnosticar el estado de funcionamiento de la máquina o equipo industrial": {"competencias": [
+              {
+                "nombre": "INDUCCIÓN",
+                "resultados": [
+                  {"ra": "Identificar la dinámica organizacional del SENA y el rol de la formación profesional integral de acuerdo con su proyecto de vida y el desarrollo personal.", "actividades": [
+                    "Conocer la historia del SENA y la dinámica del desarrollo de los procesos de formación.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Mantenimiento preventivo  de equipos de maquinaria industrial",
+                "resultados": [
+                  {"ra": "02. Ajustar sistemas de máquinas industriales de acuerdo a proceso productivo y especificaciones técnicas.", "actividades": [
+                    "Inspeccionar el estado operacional de equipos y maquinaria industrial.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicación de conocimientos de las ciencias naturales de acuerdo con situaciones del contexto productivo y social",
+                "resultados": [
+                  {"ra": "1 Aplicar fundamentos de la física en la resolución de problemas de acuerdo con los  requerimientos del contexto productivo. 2.  Interpretar los cambios que sepresentan  en los cuerpos según los principios y leyes físicas. 3. Organizar proceso productivo de forma ordenada y sistemática según los cambios físicos que ocurren en el contexto. 4. Proponer acciones de mejora en su contexto de acuerdo con principios físicos.", "actividades": [
+                    "Aplicar  fundamentos físicos que permiten entender el funcionamiento del equipo y/o maquinaria industrial",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Razonar cuantitativamente frente a situaciones susceptibles de ser abordadas de manera matemática en contextos laborales, sociales y personales",
+                "resultados": [
+                  {"ra": "1. Identificar situaciones problemáticas asociadas a sus necesidades de contexto aplicando procedimientos matemáticos. 2. Plantear problemas aritméticos, geométricos y métricos de acuerdo con los contextos productivo y social. 3. Solucionar problemas del entorno productivo y social aplicando principios matemáticos.  4. Verificar los resultados de los procedimientos matemáticos conforme con los requerimientos de los diferentes contextos.", "actividades": [
+                    "Presentar soluciones a las necesidades de su entorno, aplicando procedimientos  matemáticos.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "Elaborar planos de piezas mecánicas a mano alzada de acuerdo a normas vigentes y especificaciones técnicas.", "actividades": [
+                    "Realizar  planos simplifiados de elementos mecánicos",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Gestionar procesos propios de la cultura emprendedora y empresarial de acuerdo con el perfil personal  y los requerimientos  de los contextos productivo y social",
+                "resultados": [
+                  {"ra": "1. Integrar elementos de la cultura emprendedora teniendo en cuenta el perfil personal y el contexto de desarrollo social.  2.  Caracterizar la idea de negocio teniendo en cuenta las oportunidades y necesidades del sector productivo y social. 3. Estructurar el plan de negocio de acuerdo con las características empresariales y tendencias de mercado. 4.  Valorar la propuesta de negocio conforme con su estructura y necesidades del sector productivo y social", "actividades": [
+                    "Estructurar un plan de negocios, considerando las oportunidades y necesidades del sector productivo y social.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "1. Comprender información básica oral y escrita en inglés acerca de sí mismo, de las personas y de su contexto inmediato en realidades presentes e historias de vida. 2. Describir a nivel básico, de forma oral y escrita en inglés personas, situaciones y lugares de acuerdo con sus costumbres y experiencias de vida. 3. Participar en intercambios conversacionales básicos en forma oral y escrita en inglés en diferentes situaciones sociales tanto en la cotidianidad como en experiencias pasadas. 4. Llevar a cabo acciones de mejora relacionadas con el intercambio de información básica en inglés, sobre sí mismo, otras personas, su contexto inmediato así como de experiencias pasadas. 5. Comunicarse de manera sencilla en inglés en forma oral y escrita con un visitante o colega en un contexto laboral cotidiano. 6. Poner en práctica vocabulario básico y expresiones comunes de su área ocupacional en contextos específicos de su trabajo por medio del uso de frases sencillas en forma oral y escrita.", "actividades": [
+                    "Leer y escribir en ingles, información sencilla que permita una  comunicación  dentro de un contexto laboral y social.",
+                  ]},
+                ],
+                "hD": 64, "hI": 0
+              },
+              {
+                "nombre": "Utilizar  herramientas    informáticas    de    acuerdo    con  necesidades  de    manejo    de    información",
+                "resultados": [
+                  {"ra": "1. Seleccionar herramientas de tecnologías de la información y la comunicación (TIC), de acuerdo con las necesidades identificadas. 2. Usar herramientas TIC, de acuerdo con los requerimientos, manuales de funcionamiento, procedimientos y estándares. 3. Verificar los resultados obtenidos, de acuerdo con los requerimientos.  4. Implementar buenas prácticas de uso, de acuerdo con la tecnología empleada.", "actividades": [
+                    "Emplear herramientas TIC para el manejo de la información de acuerdo con las necesidades y/o requerimiento del equipo de trabajo.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+          },
+          "Ejecución": {
+            "Lubricar equipo o maquinaria industrial": {"competencias": [
+              {
+                "nombre": "Mantenimiento preventivo  de equipos de maquinaria industrial",
+                "resultados": [
+                  {"ra": "01. Lubricar el sistema mecánico de acuerdo con parámetros técnicos y normatividad", "actividades": [
+                    "Organizar y limpiar área de trabajo y maquinaria a inspeccionar.  Lubricar maquinaria industrial siguiendo los procedimientos técnicos y normatividad vigente.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Aplicar prácticas de protección ambiental, seguridad y salud en el trabajo de acuerdo con las políticas organizacionales y la normatividad vigente",
+                "resultados": [
+                  {"ra": "1.  Interpretar     los     problemas         ambientales     y     de     SST      teniendo     en     cuenta     los     planes     y     programas     establecidos       por    la    organización    y    el       entorno       social.     2. Efectuar       las         acciones           para       la     prevención     y     control     de     la     problemática     ambiental     y     de     SST,    teniendo    en       cuenta       los    procedimientos    establecidos    por    la   organización.   3.  Verificar     las    condiciones    ambientales    y    de    SST       acorde    con       los    lineamientos    establecidos       para     el  área    de    desempeño    laboral.     4. Reportar     las    condiciones    y    actos    que    afecten       la    protección    del    medio    ambiente    y    la    SST,    de     acuerdo  con    los    lineamientos    establecidos    en    el    contexto    organizacional    y    social", "actividades": [
+                    "Emplear normas de seguridad y salud, proteccion ambiental, considerando políticas de la organización dentro de un contexto laboral y social.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Restaurar las condiciones del elemento mecánico": {"competencias": [
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "02. Recuperar elementos mecánicos mediante herramientas de banco y máquinas auxiliares de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Elaborar elementos mecánicos con herramientas de banco.",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "Desarrollar procesos de comunicación eficaces y efectivos, teniendo en cuenta situaciones  de orden social, personal y productivo",
+                "resultados": [
+                  {"ra": "1. Interpretar  el  sentido  de  la  comunicación  como  medio  de    expresión  social,  cultural,  laboral  y   artística.  2. Decodificar    mensajes    comunicativos  en  situaciones  de  la  vida  social  y  laboral,  teniendo  en  cuenta el contexto de la comunicación.  3. Validar  la  importancia  de  los  procesos  comunicativos  teniendo  en  cuenta  criterios  de  lógica  y  racionalidad.  4. Aplicar   acciones   de   mejoramiento   en   el   desarrollo   de   procesos   comunicativos   según  requerimientos del contexto.", "actividades": [
+                    "Establecer canales de comunicación  que permitan el adecuado manejo de la información dentro del contexto social y productivo.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "1. Comprender información básica oral y escrita en inglés acerca de sí mismo, de las personas y de su contexto inmediato en realidades presentes e historias de vida. 2. Describir a nivel básico, de forma oral y escrita en inglés personas, situaciones y lugares de acuerdo con sus costumbres y experiencias de vida. 3. Participar en intercambios conversacionales básicos en forma oral y escrita en inglés en diferentes situaciones sociales tanto en la cotidianidad como en experiencias pasadas. 4. Llevar a cabo acciones de mejora relacionadas con el intercambio de información básica en inglés, sobre sí mismo, otras personas, su contexto inmediato así como de experiencias pasadas. 5. Comunicarse de manera sencilla en inglés en forma oral y escrita con un visitante o colega en un contexto laboral cotidiano. 6. Poner en práctica vocabulario básico y expresiones comunes de su área ocupacional en contextos específicos de su trabajo por medio del uso de frases sencillas en forma oral y escrita.", "actividades": [
+                    "Leer y escribir en ingles, información sencilla que permita una  comunicación  dentro de un contexto laboral y social.",
+                  ]},
+                ],
+                "hD": 64, "hI": 0
+              },
+            ]},
+            "Mecanizar elementos mecánicos": {"competencias": [
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "03. Recuperar elementos mecánicos mediante torneado de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Fabricar elementos mecánicos aplicando procesos de mecanizado con torno convencional.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en el contexto productivo y social de acuerdo con principios éticos para la construcción de una cultura de paz",
+                "resultados": [
+                  {"ra": "1. Promover mi dignidad y la del otro a partir de los principios y valores éticos como aporte en la instauración de una cultura de paz.  2. Establecer relaciones de crecimiento personal y comunitario a partir del bien común como aporte para el desarrollo social.  3. Promover el uso racional de los recursos naturales a partir de criterios de sostenibilidad y sustentabilidad ética y normativa vigente. 4. Contribuir con el fortalecimiento de la cultura de paz a partir de la dignidad humana y las estrategias para la transformación de conflictos", "actividades": [
+                    "Estrablecer relaciones personales y laborales que permitan un comunicación asertiva integrando; el respeto y dialogo  para lograr una adecuada convivencia social.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Soldar elementos mecánicos": {"competencias": [
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "04. Unir piezas metálicas mediante soldadura manual por arco eléctrico con electrodo revestido y soldadura oxiacetilénica de acuerdo con especificaciones técnicas.", "actividades": [
+                    "Soldar elementos mecánicos con la técnica de arco eléctrico con electrodo revestido y/o soldadura oxiacetilénica, según especificación y normatividad técnica.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Reparar sistemas de control eléctrico para motores": {"competencias": [
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "05. Intervenir sistemas de maniobra eléctrica para motores según  función y especificaciones técnicas", "actividades": [
+                    "Verificar y ajustar el funcionamiento del sistema de alimentación y control del motor eléctrico.",
+                  ]},
+                ],
+                "hD": 76, "hI": 0
+              },
+              {
+                "nombre": "Generación de Hábitos saludables de vida mediante la aplicación de programas de Actividad Física en los contextos productivos y sociales",
+                "resultados": [
+                  {"ra": "1. Desarrollar habilidades psicomotrices en el contexto productivo y social. 2. Practicar hábitos saludables mediante la aplicación de fundamentos de nutrición e higiene. 3. Ejecutar actividades de acondicionamiento físico orientadas hacia el mejoramiento de la condición física en los contextos productivo y social. 4. Implementar un plan de Ergonomía y Pausas Activas según las características de la función productiva.", "actividades": [
+                    "Desarrollar practicas  saludables que permitan, potenciar la capacidad fisica y mental dentro de un contexto laboral productivo.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+            ]},
+            "Reestablecer las condiciones de funcionamiento del equipo o maquina industrial": {"competencias": [
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "06. Conservar sistemas neumáticos según función y especificaciones técnicas", "actividades": [
+                    "Verificar y ajustar circuitos neumáticos según función y especificaciones técnicas.",
+                  ]},
+                  {"ra": "07. Conservar sistemas oleo-hidráulicos según  función y especificaciones técnicas", "actividades": [
+                    "Verificar y ajustar circuitos oleo-hidráulicos segun función y especificaciones técnicas.",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Interactuar en lengua inglesa de forma oral y escrita dentro de contextos sociales y laborales según los criterios establecidos por el Marco Común Europeo de Referencia las Lenguas",
+                "resultados": [
+                  {"ra": "1. Comprender información básica oral y escrita en inglés acerca de sí mismo, de las personas y de su contexto inmediato en realidades presentes e historias de vida. 2. Describir a nivel básico, de forma oral y escrita en inglés personas, situaciones y lugares de acuerdo con sus costumbres y experiencias de vida. 3. Participar en intercambios conversacionales básicos en forma oral y escrita en inglés en diferentes situaciones sociales tanto en la cotidianidad como en experiencias pasadas. 4. Llevar a cabo acciones de mejora relacionadas con el intercambio de información básica en inglés, sobre sí mismo, otras personas, su contexto inmediato así como de experiencias pasadas. 5. Comunicarse de manera sencilla en inglés en forma oral y escrita con un visitante o colega en un contexto laboral cotidiano. 6. Poner en práctica vocabulario básico y expresiones comunes de su área ocupacional en contextos específicos de su trabajo por medio del uso de frases sencillas en forma oral y escrita.", "actividades": [
+                    "Leer y escribir en inglés, información sencilla que permita una  comunicación  dentro de un contexto laboral.",
+                  ]},
+                ],
+                "hD": 64, "hI": 0
+              },
+            ]},
+          },
+          "Evaluacion": {
+            "Verificar el restablecimiento de las funciones del equipo": {"competencias": [
+              {
+                "nombre": "Ejercicio de los Derechos Fundamentales del Trabajo",
+                "resultados": [
+                  {"ra": "1. Valorar la importancia de la ciudadanía laboral con base en el estudio de los derechos humanos y fundamentales del trabajo. 2. Practicar los derechos fundamentales del trabajo de acuerdo con la Constitución Política y los Convenios Internacionales. 3. Reconocer el trabajo como uno de los elementos primordiales para la movilidad social y la transformación vital. 4. Participar en acciones solidarias orientadas al ejercicio de los derechos humanos, de los pueblos y de la naturaleza.", "actividades": [
+                    "Ejercer los derechos fundamentales humanos y del trabajo, tomando en consideracion la constitución política y los convenios internacinales",
+                  ]},
+                ],
+                "hD": 38, "hI": 0
+              },
+              {
+                "nombre": "Reparación de equipos de maquinaria industrial.",
+                "resultados": [
+                  {"ra": "08. Ensamblar elementos de máquinas según procedimientos técnicos.", "actividades": [
+                    "Verificar funcionamiento y entregar  la máquina, segun procedimientos técnicos y/o manual del fabricante",
+                  ]},
+                ],
+                "hD": 114, "hI": 0
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+
+  # ── AGREGA AQUÍ NUEVOS PROGRAMAS ──────────────────────────────
+  # "CÓDIGO — Nombre del Programa": {
+  #   "proyectos": {
+  #     "CÓDIGO — Nombre Proyecto": {
+  #       "nombre_completo": "NOMBRE COMPLETO",
+  #       "fases": { ... }
+  #     }
+  #   }
+  # }
+
+  ,
+  "223310 - GESTIÓN DE LA PRODUCCIÓN INDUSTRIAL": {
+    "proyectos": {
+      "3068368 - LEAN MANUFACTURING COMO ESTRATEGIA EMPRESARIAL PARA LA OPTIMIZACIÓN INDUSTRIAL DE LA MIPYMES EN EL DEPARTAMENTO DEL ATLÁNTICO": {
+        "nombre_completo": "3068368 - LEAN MANUFACTURING COMO ESTRATEGIA EMPRESARIAL PARA LA OPTIMIZACIÓN INDUSTRIAL DE LA MIPYMES EN EL DEPARTAMENTO DEL ATLÁNTICO",
+        "fases": {
+          "PLANEACIÓN": {
+            "DIAGNOSTICO OPERATIVO FUNCIONAL INDUSTRIAL": {"competencias": [
+              {
+                "nombre": "ORGANIZAR LAS ACTIVIDADES DE PRODUCCIÓN DE ACUERDO CON LOS OBJETIVOS EMPRESARIALES.",
+                "resultados": [
+                  {
+                    "ra": "DIAGNOSTICAR EL ENTORNO LEGAL, ORGANIZACIONAL, TECNOLÓGICO, ECONÓMICO, AMBIENTAL Y COMPETITIVO DEL SISTEMA PRODUCTIVO DE ACUERDO CON LA CLASE DE INDUSTRIA Y EL TIPO DE EMPRESA.",
+                    "actividades": [
+                      "Identificar el entorno legal, organizacional, tecnológico, económico, ambiental y competitivo del sistema productivo de acuerdo con la clase de industria y el tipo de empresa a la que pertenecen los talleres  de metalmecànica y automatizaciòn del complejo industrial Sena calle 30",
+                    ]
+                  },
+                  {
+                    "ra": "ELABORAR EL DISEÑO O REDISEÑO DE DISTRIBUCIÓN EN PLANTA CONFORME A NORMAS ESTABLECIDAS TENIENDO EN CUENTA PARÁMETROS TÉCNICOS, OPERATIVOS Y TECNOLÓGICOS.",
+                    "actividades": [
+                      "Proponer el rediseño de planta como acción de mejora a partir del análisis de la distribución actual del proceso de los  de metalmecànica y automatizaciòn del complejo industrial Sena calle 30",
+                    ]
+                  },
+                  {
+                    "ra": "GENERAR LA DOCUMENTACIÓN PARA LA ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN DE ACUERDO CON LOS OBJETIVOS ORGANIZACIONALES.",
+                    "actividades": [
+                      "Elaborar la documentación del sistema productivo de los talleres de metalmecànica y automatizaciòn del complejo industrial Sena calle 30 para su estandarizaciòn y control",
+                    ]
+                  },
+                  {
+                    "ra": "ESTABLECER EL SISTEMA PRODUCTIVO DE ACUERDO CON EL NIVEL DE TRANSFORMACIÓN, LA ORGANIZACIÓN QUE SE TIENE PARA PRODUCIR Y LA NATURALEZA DEL PRODUCTO.",
+                    "actividades": [
+                      "Determinar el sistema productivo de los talleres de metalmecànica y automatizaciòn del complejo industrial Sena calle 30 teniendo en cuentan los diferentes niveles de transformación, organización productiva y la naturaleza del producto.",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "PROGRAMAR LA PRODUCCIÓN SEGÚN PRODUCTO A FABRICAR Y PRIORIDADES ESTABLECIDAS",
+                "resultados": [
+                  {
+                    "ra": "SELECCIONAR EL PROCESO PRODUCTIVO DE ACUERDO CON EL PRODUCTO A FABRICAR.",
+                    "actividades": [
+                      "Seleccionar el proceso productivo de acuerdo con el producto a fabricar.",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "DEFINIR HERRAMIENTAS PARA AUTOMATIZACIÓN Y CONTROL DE PROCESOS, CUMPLIENDO CON ESPECIFICACIONES TÉCNICAS DEL PRODUCTO.",
+                "resultados": [
+                  {
+                    "ra": "DIAGNOSTICAR EL GRADO DE AUTOMATIZACIÓN DEL PROCESO DE PRODUCCIÓN DE ACUERDO A LAS NECESIDADES DE LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Realizar el diseño del automatismo que mejore el sistema productivo, teniendo en cuenta  el diagnostico y la clasificación  del nivel tecnológico del proceso.",
+                    ]
+                  },
+                  {
+                    "ra": "SELECCIONAR LA TECNOLOGÍA A UTILIZAR PARA EL DESARROLLO DEL AUTOMATISMO DE ACUERDO AL DIAGNOSTICO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: SELECCIONAR LA TECNOLOGÍA A UTILIZAR PARA EL DESARROLLO DEL ",
+                    ]
+                  },
+                  {
+                    "ra": "DISEÑAR EL AUTOMATISMO REQUERIDO DE ACUERDO CON LAS NECESIDADES DEL PROCESO.",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: DISEÑAR EL AUTOMATISMO REQUERIDO DE ACUERDO CON LAS NECESIDA",
+                    ]
+                  },
+                ],
+                "hD": 58, "hI": 14
+              },
+              {
+                "nombre": "CONTROLAR EL FLUJO DE MATERIALES Y DE INFORMACIÓN SEGÚN REQUERIMIENTOS DEL PROCESO PRODUCTIVO",
+                "resultados": [
+                  {
+                    "ra": "DETERMINAR EL TIPO DE EMPAQUE Y EMBALAJE DE ACUERDO CON LAS CARACTERÍSTICAS DE MANIPULACIÓN DEL PRODUCTO Y NORMATIVIDAD LEGAL VIGENTE",
+                    "actividades": [
+                      "Seleccionar el tipo de empaque y embalaje de acuerdo con las características de manipulación del producto.",
+                    ]
+                  },
+                  {
+                    "ra": "DETERMINAR EL MEDIO DE TRANSPORTE PARA LA DISTRIBUCIÓN DEL PRODUCTO DE ACUERDO CON LAS NECESIDADES DE LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Definir la logística de distribución según los requerimientos de la demanda",
+                    ]
+                  },
+                  {
+                    "ra": "DETERMINAR LAS CONDICIONES DE ALMACENAMIENTO Y CONSERVACIÓN DE LOS MATERIALES EN LA CADENA DE ABASTECIMIENTO, DE ACUERDO CON LAS ESPECIFICACIONES ESTABLECIDAS EN LAS",
+                    "actividades": [
+                      "Establecer el procedimiento para administrar y determinar las condicones de almaceanmiento y conservacion de los materiales de acuerdo con las especificaciones establecidas de las fichas tecnicas.",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "CONTROLAR LA CALIDAD DE LOS PROCESOS DE ACUERDO CON LA NORMATIVIDAD VIGENTE",
+                "resultados": [
+                  {
+                    "ra": "IDENTIFICAR LAS ETAPAS Y VARIABLES DEL PROCESO PRODUCTIVO Y LOS REQUERIMIENTOS DEL PRODUCTO DE ACUERDO CON LA NORMATIVIDAD VIGENTE",
+                    "actividades": [
+                      "Identificar las variables criticas del producto a partir de la relación con el proceso.",
+                    ]
+                  },
+                ],
+                "hD": 26, "hI": 7
+              },
+              {
+                "nombre": "ELABORAR EL PLAN GENERAL DE PRODUCCIÓN, SEGÚN PLAN DE VENTAS, NIVELES DE INVENTARIO Y CAPACIDAD DE PRODUCCIÓN",
+                "resultados": [
+                  {
+                    "ra": "PLANEAR LOS REQUERIMIENTOS DE LA RED DE DISTRIBUCIÓN DE LA EMPRESA DE ACUERDO CON EL PLAN DE VENTAS.",
+                    "actividades": [
+                      "Definir la logística de distribución según los requerimientos de la demanda",
+                    ]
+                  },
+                  {
+                    "ra": "CALCULAR LA CAPACIDAD DE PRODUCCIÓN DISPONIBLE EN FUNCIÓN DE LA CAPACIDAD DE LA PLANTA.",
+                    "actividades": [
+                      "Proponer alternativas o estrategias de capacidad de producción  para atender los requerimientos de la demanda.",
+                    ]
+                  },
+                  {
+                    "ra": "ELABORAR EL PLAN DE PRODUCCIÓN DE ACUERDO CON EL PLAN DE VENTAS Y LAS CARACTERÍSTICAS DEL MERCADO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: ELABORAR EL PLAN DE PRODUCCIÓN DE ACUERDO CON EL PLAN DE VEN",
+                    ]
+                  },
+                  {
+                    "ra": "ELABORAR EL PRESUPUESTO DE LOS GASTOS INDIRECTOS DE PRODUCCIÓN DE ACUERDO AL PLAN DE PRODUCCIÓN",
+                    "actividades": [
+                      "Determinar el presupuesto  a partir de los requerimientos y costos de producción.",
+                    ]
+                  },
+                  {
+                    "ra": "CALCULAR LOS COSTOS DE PRODUCCIÓN DE ACUERDO CON LOS ESTÁNDARES Y NORMATIVIDAD ESTABLECIDA",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: CALCULAR LOS COSTOS DE PRODUCCIÓN DE ACUERDO CON LOS ESTÁNDA",
+                    ]
+                  },
+                  {
+                    "ra": "ESTIMAR LA DEMANDA DE UN PRODUCTO O DE UNA FAMILIA DE PRODUCTOS DE ACUERDO CON EL COMPORTAMIENTO DE LAS VENTAS.",
+                    "actividades": [
+                      "Determinar los requerimientos de producción a partir del comportamiento de la demanda de un producto.",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "IMPLEMENTAR HERRAMIENTAS DE OPTIMIZACIÓN DE RECURSOS PARA EL MEJORAMIENTO DE LOS PROCESOS",
+                "resultados": [
+                  {
+                    "ra": "DIAGNOSTICAR LA SITUACIÓN PROBLEMICA A MEJORAR DE ACUERDO CON EL ESTUDIO DEL PROCESO.",
+                    "actividades": [
+                      "Elaborar  una propuesta de optimización a partir de un proceso productivo seleccionado.",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "ORIENTAR LAS ACTIVIDADES DEL PERSONAL A CARGO, CON BASE A LAS POLÍTICAS DE LA ORGANIZACIÓN",
+                "resultados": [
+                  {
+                    "ra": "SELECCIONAR AL PERSONAL DE ACUERDO CON LAS POLÍTICAS DE LA EMPRESA Y A LOS PROCESOS DE LA MISMA",
+                    "actividades": [
+                      "Aplicar técnicas de selección del personal considerando los perfiles de cargo",
+                    ]
+                  },
+                  {
+                    "ra": "DETERMINAR PERFILES DE TRABAJO Y DEL PERSONAL A SU CARGO DE ACUERDO CON LAS POLÍTICAS DE LA EMPRESA Y CONDICIONES REQUERIDAS.",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: DETERMINAR PERFILES DE TRABAJO Y DEL PERSONAL A SU CARGO DE ",
+                    ]
+                  },
+                ],
+                "hD": 22, "hI": 5
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {
+                    "ra": "COMPRENDER FRASES Y VOCABULARIO HABITUAL SOBRE TEMAS DE INTERÉS PERSONAL Y TEMAS TÉCNICOS",
+                    "actividades": [
+                      "GUIA TGPI #3                            Identificar vocabulario técnico en inglés relacionado con Gestión de la Producción Industrial-Prácticar inglés técnico a través de un Role play.-Relaciona términos técnicos en inglés utilizados en gestión de la producción industrial.-Crea un muro de Vocabulario técnico en inglés para tu ambiente de formación. -Aplicar el vocabulario técnico en inglés relacionado con la industria y la producción, completando oraciones con la palabra correcta según el contexto. -",
+                    ]
+                  },
+                  {
+                    "ra": "REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON UN VOCABULARIO SUFICIENTE PARA HACER UNA EXPOSICIÓN O MANTENER UNA CONVERSACIÓN SENCILLA SOBRE TEMAS TÉCNICOS",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON U",
+                    ]
+                  },
+                  {
+                    "ra": "LEER TEXTOS MUY BREVES YSENCILLOS EN INGLÉS GENERAL Y TÉCNICO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: LEER TEXTOS MUY BREVES YSENCILLOS EN INGLÉS GENERAL Y TÉCNIC",
+                    ]
+                  },
+                ],
+                "hD": 25, "hI": 0
+              },
+              {
+                "nombre": "PRODUCIR TEXTOS EN INGLÉS EN FORMA ESCRITA Y ORAL",
+                "resultados": [
+                  {
+                    "ra": "REPRODUCIR EN INGLÉS FRASES O ENUNCIADOS SIMPLES QUE PERMITAN EXPRESAR DE FORMA LENTA IDEAS O",
+                    "actividades": [
+                      "GUIA TGPI #4                             Usar el  Modo Pasivo y Activo en inglés en la descripción de una línea de producción. -Aplicar Modal Verbs en inglés para predecir un resultado de un proceso de fabricación.  -Usar adjetivos y preposiciones en inglés para la descripción de la distribución de una planta.  -Identificar Superlativos, adjetivos y adverbios en inglés  para comparar la eficiencia en la producción. -Aplicar Modos Pasivo y Activo, Modal Verbs: Utilizados en Suposiciones, Adjectives y Prepositions: Ubicación, Superlatives: Adjetivos y Adverbios para el diseño de una estación de trabajo.",
+                    ]
+                  },
+                  {
+                    "ra": "ENCONTRAR Y UTILIZAR SIN ESFUERZO VOCABULARIO Y EXPRESIONES DE INGLÉS TÉCNICO EN ARTÍCULOS DE REVISTAS, LIBROS ESPECIALIZADOS, PÁGINAS WEB, ETC",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: ENCONTRAR Y UTILIZAR SIN ESFUERZO VOCABULARIO Y EXPRESIONES ",
+                    ]
+                  },
+                  {
+                    "ra": "IDENTIFICAR FORMAS GRAMATICALES BÁSICAS EN TEXTOS Y DOCUMENTOS ELEMENTALES ESCRITOS EN INGLÉS",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: IDENTIFICAR FORMAS GRAMATICALES BÁSICAS EN TEXTOS Y DOCUMENT",
+                    ]
+                  },
+                  {
+                    "ra": "COMPRENDER UNA AMPLIA VARIEDAD DE FRASES Y VOCABULARIO EN INGLÉS SOBRE TEMAS DE INTERÉS PERSONAL Y TEMAS",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: COMPRENDER UNA AMPLIA VARIEDAD DE FRASES Y VOCABULARIO EN IN",
+                    ]
+                  },
+                ],
+                "hD": 22, "hI": 0
+              },
+              {
+                "nombre": "PROMOVER LA INTERACCIÓN IDÓNEA CONSIGO MISMO, CON LOS DEMÁS Y CON LA NATURALEZA EN LOS CONTEXTOS LABORAL Y SOCIAL",
+                "resultados": [
+                  {
+                    "ra": "RECONOCER EL ROL DE LOS PARTICIPANTES EN EL PROCESO FORMATIVO, EL PAPEL DE LOS AMBIENTES DE APRENDIZAJE Y LA METODOLOGÍA DE FORMACIÓN, DE ACUERDO CON LA DINÁMICA ORGANIZACIONAL",
+                    "actividades": [
+                      "ACT. 1 Identificar la estructura organizacional y funcional del SENA.  ACT. 2 Establecer la relación del programa de formación en el cual está matriculado con el proyecto de formación que desarrollará para lograr los resultados de aprendizaje, en esta podrá incluir imágenes, diseño, y lo que considere que puede hacer llamativo su trabajo.",
+                    ]
+                  },
+                  {
+                    "ra": "CONCERTAR ALTERNATIVAS Y ACCIONES DE FORMACIÓN PARA EL DESARROLLO DE LAS COMPETENCIAS DEL PROGRAMA FORMACIÓN, CON BASE EN LA POLÍTICA INSTITUCIONAL.",
+                    "actividades": [
+                      "ACT. 2 Elaborar plegable sobre las alternativas para el desarrollo de la Etapa Productiva, según Leyes que regulan la normatividad etapa productiva vigente.",
+                    ]
+                  },
+                  {
+                    "ra": "APLICAR TÉCNICAS DE CULTURA FÍSICA PARA EL MEJORAMIENTO DE SU EXPRESIÓN CORPORAL, DESEMPEÑO LABORAL SEGÚN LA NATURALEZA Y COMPLEJIDAD DEL ÁREA OCUPACIONAL.",
+                    "actividades": [
+                      "ACT. 2 Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html",
+                    ]
+                  },
+                  {
+                    "ra": "GESTIONAR LA INFORMACIÓN DE ACUERDO CON LOS PROCEDIMIENTOS ESTABLECIDOS Y CON LAS TECNOLOGÍAS DE LA INFORMACIÓN Y LA COMUNICACIÓN DISPONIBLES.",
+                    "actividades": [
+                      "ACT. 1  Usar de las herramientas tecnológicas de la información y la comunicación (TIC) institucionales y el  paquete de programas informáticos integrada en Microsoft Office (Excel, PowerPoint, Word), dispuestos por el SENA, como fuente del conocimiento",
+                    ]
+                  },
+                  {
+                    "ra": "DESARROLLAR PROCESOS COMUNICATIVOS EFICACES Y ASERTIVOS DENTRO DE CRITERIOS DE RACIONALIDAD QUE POSIBILITEN LA CONVIVENCIA, EL ESTABLECIMIENTO DE ACUERDOS, LA CONSTRUCCIÓN COLECTIVA DEL CONOCIMIENTO Y LA RESOLUCIÓN DE PROBLEMAS DE CARÁCTER PRODUCTIVO Y",
+                    "actividades": [
+                      "ACT. 3 Apropiar los conceptos de comunicación, técnicas para la argumentación, comunicación asertiva y efectiva, empatía y asertividad.",
+                    ]
+                  },
+                  {
+                    "ra": "GENERAR HÁBITOS SALUDABLES EN SU ESTILO DE VIDA PARA GARANTIZAR LA PREVENCIÓN DE RIESGOS OCUPACIONALES DE ACUERDO CON EL DIAGNÓSTICO DE SU CONDICIÓN FÍSICA INDIVIDUAL Y LA NATURALEZA Y COMPLEJIDAD DE SU DESEMPEÑO LABORAL.",
+                    "actividades": [
+                      "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) relacionados con la seguridad y salud en el trabajo de su programa de formación.",
+                    ]
+                  },
+                  {
+                    "ra": "GENERAR PROCESOS AUTÓNOMOS Y DE TRABAJO COLABORATIVO PERMANENTES, FORTALECIENDO EL EQUILIBRIO DE LOS COMPONENTES RACIONALES Y EMOCIONALES ORIENTADOS HACIA EL DESARROLLO HUMANO INTEGRAL.",
+                    "actividades": [
+                      "ACT. 2 Aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
+                    ]
+                  },
+                  {
+                    "ra": "DESARROLLAR PERMANENTEMENTE LAS HABILIDADES PSICOMOTRICES Y DE PENSAMIENTO EN LA EJECUCIÓN DE LOS PROCESOS DE APRENDIZAJE.",
+                    "actividades": [
+                      "ACTI. 3 Hacer ejercicios físicos claves fundamentales a la hora de llevar un estilo de vida saludable para prevenir y reducir riesgos, según Marco normativo del Sistema General de Riesgos laborales y protocolos vigentes",
+                    ]
+                  },
+                  {
+                    "ra": "IDENTIFICAR LAS OPORTUNIDADES QUE EL SENA OFRECE EN EL MARCO DE LA FORMACIÓN PROFESIONAL DE ACUERDO CON EL CONTEXTO NACIONAL E INTERNACIONAL.",
+                    "actividades": [
+                      "ACT. 2 Elaborar plegable sobre las alternativas para el desarrollo de la Etapa Productiva, según Leyes que regulan la normatividad etapa productiva vigente.",
+                    ]
+                  },
+                ],
+                "hD": 1, "hI": 0
+              },
+            ]},
+          },
+          "HACER": {
+            "IMPLEMENTACIÓN OPERATIVO FUNCIONAL INDUSTRIAL": {"competencias": [
+              {
+                "nombre": "CONTROLAR EL FLUJO DE MATERIALES Y DE INFORMACIÓN SEGÚN REQUERIMIENTOS DEL PROCESO PRODUCTIVO",
+                "resultados": [
+                  {
+                    "ra": "COORDINAR EL FLUJO DE MATERIALES Y DE LA INFORMACIÓN, SEGÚN LOS PROCEDIMIENTOS DE LA ORGANIZACIÓN",
+                    "actividades": [
+                      "Evaluar el flujo de materiales y la informacion segun los procedimientos de la organizacion.",
+                    ]
+                  },
+                  {
+                    "ra": "ADMINISTRAR LOS INVENTARIOS DE MATERIALES SEGÚN PROCEDIMIENTOS DE LA ORGANIZACIÓN",
+                    "actividades": [
+                      "Establecer el procedimiento para administrar y determinar las condicones de almaceanmiento y conservacion de los materiales de acuerdo con las especificaciones establecidas de las fichas tecnicas.",
+                    ]
+                  },
+                  {
+                    "ra": "COORDINAR EL PROCESO DE COMPRAS TENIENDO EN CUENTA LAS CONDICIONES ESTABLECIDAS EN LA SELECCIÓN Y EVALUACIÓN DE PROVEEDORES Y DE ACUERDO CON LAS NORMAS DE LA EMPRESA",
+                    "actividades": [
+                      "Establecer el procedimiento para la seleccion, evaluación, reevaluacion y seguimiento a losproveedores",
+                    ]
+                  },
+                ],
+                "hD": 44, "hI": 11
+              },
+              {
+                "nombre": "CONTROLAR LA CALIDAD DE LOS PROCESOS DE ACUERDO CON LA NORMATIVIDAD VIGENTE",
+                "resultados": [
+                  {
+                    "ra": "INSPECCIONAR EL COMPORTAMIENTO DE LAS VARIABLES DEL PROCESO Y DEL PRODUCTO DE ACUERDO CON LAS TÉCNICAS ESTABLECIDAS.",
+                    "actividades": [
+                      "Verificación e Inspección del Comportamiento de Variables del Proceso y del Producto mediante Técnicas de Control de Calidad",
+                    ]
+                  },
+                  {
+                    "ra": "ELABORAR LAS CARTAS DE CONTROL Y LA INTERPRETACIÓN DEL COMPORTAMIENTO ESTADÍSTICO DE LOS DATOS DE LAS VARIABLES DE ACUERDO CON LAS CARACTERÍSTICAS DEL PROCESO Y DEL PRODUCTO.",
+                    "actividades": [
+                      "Diseño e Interpretación de Gráficas de Control para el Monitoreo Estadístico de Procesos Productivos",
+                    ]
+                  },
+                  {
+                    "ra": "REALIZAR MEDICIONES DE VARIABLES DE PROCESO DE ACUERDO CON PROCEDIMIENTOS ESTABLECIDOS.",
+                    "actividades": [
+                      "Evaluar la calidad de un producto de acuerdo a sus caracteristicas  .",
+                    ]
+                  },
+                  {
+                    "ra": "REALIZAR PRUEBAS Y ENSAYOS DE MATERIALES DE ACUERDO CON ESPECIFICACIONES TÉCNICAS",
+                    "actividades": [
+                      "Elaborar un grafico de control a partir del plan de calidad establecido",
+                    ]
+                  },
+                ],
+                "hD": 132, "hI": 33
+              },
+              {
+                "nombre": "ELABORAR EL PLAN GENERAL DE PRODUCCIÓN, SEGÚN PLAN DE VENTAS, NIVELES DE INVENTARIO Y CAPACIDAD DE PRODUCCIÓN",
+                "resultados": [
+                  {
+                    "ra": "GENERAR LA DOCUMENTACIÓN PARA CONSIGNAR LOS PLANES DE PRODUCCIÓN DE ACUERDO CON PROCEDIMIENTOS ESTABLECIDOS.",
+                    "actividades": [
+                      "Determinar el tiempo estándar de las actividades productivas como acción de mejora  a partir del estudio de tiempos y movimientos",
+                    ]
+                  },
+                ],
+                "hD": 26, "hI": 7
+              },
+              {
+                "nombre": "PROGRAMAR LA PRODUCCIÓN SEGÚN PRODUCTO A FABRICAR Y PRIORIDADES ESTABLECIDAS",
+                "resultados": [
+                  {
+                    "ra": "DEFINIR LAS FECHAS DE INICIO, TERMINACIÓN Y ENTREGA DE CADA UNO DE LOS TRABAJOS O PEDIDOS DE ACUERDO CON LOS ESTÁNDARES DE PRODUCCIÓN DE LA EMPRESA, LOS REQUERIMIENTOS DEL CLIENTE Y LA DISPONIBILIDAD DE RECURSOS.",
+                    "actividades": [
+                      "Generar el programa de producción de acuerdo a los requerimientos del cliente y la disponibilidad de recursos",
+                    ]
+                  },
+                  {
+                    "ra": "DETERMINAR LA PRIORIDAD DE PROCESAMIENTO (SECUENCIA) DE LOS TRABAJOS O PEDIDOS ASIGNADOS A LOS CENTROS DE TRABAJO O MAQUINAS DE ACUERDO CON LAS CARACTERÍSTICAS D",
+                    "actividades": [
+                      "Generar el programa de producción de acuerdo a los requerimientos del cliente y la disponibilidad de recursos",
+                    ]
+                  },
+                  {
+                    "ra": "ASIGNAR CARGAS DE TRABAJO EN LOS CENTROS DE TRABAJO O MAQUINAS DEL PROCESO PRODUCTIVO DE ACUERDO CON SU DISPONIBILIDAD.",
+                    "actividades": [
+                      "Determinar las cargas de trabajo en el proceso productivo, teniendo en cuenta los recursos, tiempos y requerimientos del sistema.",
+                    ]
+                  },
+                ],
+                "hD": 26, "hI": 7
+              },
+              {
+                "nombre": "DEFINIR HERRAMIENTAS PARA AUTOMATIZACIÓN Y CONTROL DE PROCESOS, CUMPLIENDO CON ESPECIFICACIONES TÉCNICAS DEL PRODUCTO.",
+                "resultados": [
+                  {
+                    "ra": "IMPLEMENTAR EL AUTOMATISMO EN EL PROCESO DE ACUERDO CON ESPECIFICACIONES ESTABLECIDAS",
+                    "actividades": [
+                      "Realizar el montaje requerido del automatismo para el proceso productivo de acuerdo con especificaciones del diseño.",
+                    ]
+                  },
+                ],
+                "hD": 58, "hI": 14
+              },
+              {
+                "nombre": "ORIENTAR LAS ACTIVIDADES DEL PERSONAL A CARGO, CON BASE A LAS POLÍTICAS DE LA ORGANIZACIÓN",
+                "resultados": [
+                  {
+                    "ra": "APOYAR EL DESARROLLO Y MEJORAMIENTO PERSONAL DE LOS COLABORADORES, TENIENDO EN CUENTA LAS POLÍTICAS DE LA EMPRESA",
+                    "actividades": [
+                      "Presentar plan de acción y desarrollo del personal  a partir del resultado de la evaluación de desempeño",
+                    ]
+                  },
+                  {
+                    "ra": "ASEGURAR EL CUMPLIMIENTO DE LAS NORMAS, REGLAMENTOS Y PROGRAMAS, DE ACUERDO CON LAS POLÍTICAS DE LA ORGANIZACIÓN",
+                    "actividades": [
+                      "Elaborar la Matriz legal laboral de una empresa segun el tipo de activiad economica",
+                    ]
+                  },
+                  {
+                    "ra": "PROGRAMAR TURNOS DE TRABAJO DE ACUERDO CON LAS POLÍTICAS DE LA ORGANIZACIÓN Y NORMATIVIDAD LEGAL VIGENTE.",
+                    "actividades": [
+                      "Programar turnos de trabajo teniendo en cuenta normatividad vigente y programa de producción.",
+                    ]
+                  },
+                ],
+                "hD": 16, "hI": 4
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {
+                    "ra": "ENCONTRAR VOCABULARIO Y EXPRESIONES DE INGLÉS TÉCNICO EN ANUNCIOS, FOLLETOS, PÁGINAS WEB, ETC",
+                    "actividades": [
+                      "GUIA PPE #1                                             Identificar vocabulario en inglés sobre Equipos de Protección Personal, vestimenta y partes del cuerpo para el desempeño del trabajo.-Fortalecer la comprensión lectora y la traducción de textos en inglés técnico vinculados al ámbito de seguridad laboral.-Desarrollar la capacidad de escribir textos en inglés en contextos laborales relacionados con el uso adecuado e importancia de los PPE.-3.3.4	Identificar vocabulario en inglés sobre los Equipos de Protección personal utilizados en el ámbito laboral.-Identificar conceptos sobre vestimenta general con sus sinónimos en inglés.-Identificar las partes del cuerpo en inglés que estén asociados a los EPP.-3.3.7	Buscar todos los sinónimos en inglés del siguiente vocabulario de vestuario y de EPP.",
+                    ]
+                  },
+                  {
+                    "ra": "ENCONTRAR INFORMACIÓN ESPECÍFICA Y PREDECIBLE EN ESCRITOS SENCILLOS Y COTIDIANOS",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: ENCONTRAR INFORMACIÓN ESPECÍFICA Y PREDECIBLE EN ESCRITOS SE",
+                    ]
+                  },
+                ],
+                "hD": 20, "hI": 5
+              },
+              {
+                "nombre": "PRODUCIR TEXTOS EN INGLÉS EN FORMA ESCRITA Y ORAL",
+                "resultados": [
+                  {
+                    "ra": "COMPRENDER LAS IDEAS PRINCIPALES DE TEXTOS COMPLEJOS EN INGLÉS QUE TRATAN DE TEMAS TANTO CONCRETOS COMO ABSTRACTOS, INCLUSO SI SON DE CARÁCTER TÉCNICO, SIEMPRE QUE ESTÉN DENTRO DE SU CAMPO DE ESPECIALIZACIÓN",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: COMPRENDER LAS IDEAS PRINCIPALES DE TEXTOS COMPLEJOS EN INGL",
+                    ]
+                  },
+                  {
+                    "ra": "LEER TEXTOS COMPLEJOS Y CON UN VOCABULARIO MÁS ESPECÍFICO, EN INGLÉS GENERAL Y TÉCNICO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: LEER TEXTOS COMPLEJOS Y CON UN VOCABULARIO MÁS ESPECÍFICO, E",
+                    ]
+                  },
+                  {
+                    "ra": "BUSCAR DE MANERA SISTEMÁTICA INFORMACIÓN ESPECÍFICA Y DETALLADA EN ESCRITOS EN INGLÉS, MAS ESTRUCTURADOS Y CON MAYOR CONTENIDO TÉCNICO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: BUSCAR DE MANERA SISTEMÁTICA INFORMACIÓN ESPECÍFICA Y DETALL",
+                    ]
+                  },
+                ],
+                "hD": 18, "hI": 4
+              },
+              {
+                "nombre": "PROMOVER LA INTERACCIÓN IDÓNEA CONSIGO MISMO, CON LOS DEMÁS Y CON LA NATURALEZA EN LOS CONTEXTOS LABORAL Y SOCIAL",
+                "resultados": [
+                  {
+                    "ra": "ASUMIR LOS DEBERES Y DERECHOS CON BASE EN LAS LEYES Y LA NORMATIVA INSTITUCIONAL EN EL MARCO DE SU PROYECTO DE VIDA.",
+                    "actividades": [
+                      "Identificar los componentes normativos e institucionales del SENA, y el Reglamento Interno de la Entidad como aprendiz",
+                    ]
+                  },
+                  {
+                    "ra": "INTERACTUAR EN LOS CONTEXTOS PRODUCTIVOS Y SOCIALES EN FUNCIÓN DE LOS PRINCIPIOS Y VALORES UNIVERSALES",
+                    "actividades": [
+                      "ACT: 1 simular de caso o dilema ético relacionado con situaciones reales del entorno productivo (ej. discriminación, falta de compromiso, negligencia ambiental, maltrato verbal, uso indebido de recursos",
+                    ]
+                  },
+                ],
+                "hD": 1, "hI": 0
+              },
+            ]},
+          },
+          "VERIFICAR": {
+            "MEJORAR Y CONTROLAR": {"competencias": [
+              {
+                "nombre": "ORGANIZAR LAS ACTIVIDADES DE PRODUCCIÓN DE ACUERDO CON LOS OBJETIVOS EMPRESARIALES.",
+                "resultados": [
+                  {
+                    "ra": "REALIZAR ESTUDIOS DE TIEMPOS Y MOVIMIENTO DE LOS PROCESOS DE PRODUCCIÓN DE ACUERDO CON LOS MÉTODOS Y TÉCNICAS ESTABLECIDOS",
+                    "actividades": [
+                      "Determinar el tiempo estándar de las actividades productivas como acción de mejora  a partir del estudio de tiempos y movimientos",
+                    ]
+                  },
+                  {
+                    "ra": "EJECUTAR EL PLAN DE EMERGENCIA Y CONTINGENCIA, TENIENDO EN CUENTA EL PROCEDIMIENTO ESTABLECIDO POR LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Evaluar la programación de  producción de acuerdo a los requerimientos de la organización",
+                    ]
+                  },
+                ],
+                "hD": 110, "hI": 0
+              },
+              {
+                "nombre": "CONTROLAR EL FLUJO DE MATERIALES Y DE INFORMACIÓN SEGÚN REQUERIMIENTOS DEL PROCESO PRODUCTIVO",
+                "resultados": [
+                  {
+                    "ra": "EVALUAR LOS COMPONENTES QUE INTERVIENEN EN UNA CADENA DE ABASTECIMIENTO Y SU INTERRELACIÓN DE ACUERDO CON LAS CARACTERÍSTICAS DEL ENTORNO ORGANIZACIONAL.",
+                    "actividades": [
+                      "Evaluar las características de la cadena de valor y su interrelación con la cadena de suministro de la organización",
+                    ]
+                  },
+                ],
+                "hD": 55, "hI": 0
+              },
+              {
+                "nombre": "PROGRAMAR LA PRODUCCIÓN SEGÚN PRODUCTO A FABRICAR Y PRIORIDADES ESTABLECIDAS",
+                "resultados": [
+                  {
+                    "ra": "CONTROLAR Y MONITOREAR LOS TIEMPOS DE FABRICACIÓN, LA CANTIDAD DE RECURSOS EMPLEADOS Y LA CANTIDAD DE PRODUCTOS OBTENIDOS DE ACUERDO CON EL PLAN DE PRODUCCIÓN.",
+                    "actividades": [
+                      "Evaluar la programación de  producción de acuerdo a los requerimientos de la organización",
+                    ]
+                  },
+                ],
+                "hD": 32, "hI": 0
+              },
+              {
+                "nombre": "IMPLEMENTAR HERRAMIENTAS DE OPTIMIZACIÓN DE RECURSOS PARA EL MEJORAMIENTO DE LOS PROCESOS",
+                "resultados": [
+                  {
+                    "ra": "MONITOREAR LA EJECUCIÓN DE LA PROPUESTA DE MEJORAMIENTO TENIENDO EN CUENTA LOS REQUERIMIENTOS ESTABLECIDOS POR LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Implementar herramientas de gestión para la optimización del proceso productivo.",
+                    ]
+                  },
+                  {
+                    "ra": "FORMULAR EL MODELO DEL PROBLEMA A OPTIMIZAR CON BASE EN EL PLAN DE MEJORAMIENTO TENIENDO EN CUENTA LOS INDICADORES ESTABLECIDOS POR LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Elaborar  una propuesta de optimización a partir de un proceso productivo seleccionado.",
+                    ]
+                  },
+                  {
+                    "ra": "ENCONTRAR LA SOLUCIÓN DEL PROBLEMA A OPTIMIZAR TENIENDO EN CUENTA LOS INDICADORES DE MEJORAMIENTO ESTABLECIDOS POR LA ORGANIZACIÓN.",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: ENCONTRAR LA SOLUCIÓN DEL PROBLEMA A OPTIMIZAR TENIENDO EN C",
+                    ]
+                  },
+                ],
+                "hD": 33, "hI": 0
+              },
+              {
+                "nombre": "DEFINIR HERRAMIENTAS PARA AUTOMATIZACIÓN Y CONTROL DE PROCESOS, CUMPLIENDO CON ESPECIFICACIONES TÉCNICAS DEL PRODUCTO.",
+                "resultados": [
+                  {
+                    "ra": "MONITOREAR EL FUNCIONAMIENTO DEL AUTOMATISMO EN EL PROCESO DE PRODUCCIÓN DE ACUERDO CON ESTANDARES ESTABLECIDOS.",
+                    "actividades": [
+                      "Implementar sistema de monitoreo asociado a las variables criticas industriales del proceso productivo.",
+                    ]
+                  },
+                ],
+                "hD": 72, "hI": 0
+              },
+              {
+                "nombre": "ORIENTAR LAS ACTIVIDADES DEL PERSONAL A CARGO, CON BASE A LAS POLÍTICAS DE LA ORGANIZACIÓN",
+                "resultados": [
+                  {
+                    "ra": "EVALUAR EL DESEMPEÑO DEL PERSONAL DE ACUERDO CON POLÍTICAS DE LA EMPRESA.",
+                    "actividades": [
+                      "Presentar plan de acción y desarrollo del personal  a partir del resultado de la evaluación de desempeño",
+                    ]
+                  },
+                ],
+                "hD": 28, "hI": 0
+              },
+              {
+                "nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {
+                    "ra": "COMUNICARSE EN TAREAS SENCILLAS Y HABITUALES QUE REQUIEREN UN INTERCAMBIO SIMPLE Y DIRECTO DE INFORMACIÓN COTIDIANA Y TÉCNICA",
+                    "actividades": [
+                      "GUIA TGPI #5                               Describir en inglés con Demostrativos: THIS /THOSE / THAT/ MANY/ ALOT OF / A FEW/ SOME  los elementos que se encuentran en tu ambiente de trabajo.-Explicar con demostrativos THIS /THOSE / THAT/ MANY/ ALOT OF / A FEW/ SOME y vocabulario técnico en inglés los procesos de gestión o mantenimiento.-Comparar con \"used to\" y vocabulario técnico en inglés procesos industriales del pasado con los de la actualidad.  -Aplicar Presente Simple y Presente continuo en oraciones en contexto laboral.  -Identificar Vocabualrio técnico de Gestión de la producción industrial a través de actividades practicas. -Aplicar pasado simple y continuo a través de un reporte de incidente en una línea de producción.-",
+                    ]
+                  },
+                  {
+                    "ra": "COMPRENDER LA IDEA PRINCIPAL EN AVISOS Y MENSAJES BREVES, CLAROS Y SENCILLOS EN INGLÉS TÉCNICO",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: COMPRENDER LA IDEA PRINCIPAL EN AVISOS Y MENSAJES BREVES, CL",
+                    ]
+                  },
+                ],
+                "hD": 25, "hI": 0
+              },
+              {
+                "nombre": "PRODUCIR TEXTOS EN INGLÉS EN FORMA ESCRITA Y ORAL",
+                "resultados": [
+                  {
+                    "ra": "RELACIONARSE CON HABLANTES NATIVOS EN UN GRADO SUFICIENTE DE FLUIDEZ Y NATURALIDAD, DE MODO QUE LA COMUNICACIÓN SE REALICE SIN ESFUERZO POR PARTE DE LOS INTERLOCUTORES",
+                    "actividades": [
+                      "Desarrollar actividades relacionadas con: RELACIONARSE CON HABLANTES NATIVOS EN UN GRADO SUFICIENTE DE",
+                    ]
+                  },
+                ],
+                "hD": 26, "hI": 0
+              },
+              {
+                "nombre": "PROMOVER LA INTERACCIÓN IDÓNEA CONSIGO MISMO, CON LOS DEMÁS Y CON LA NATURALEZA EN LOS CONTEXTOS LABORAL Y SOCIAL",
+                "resultados": [
+                  {
+                    "ra": "REDIMENSIONAR PERMANENTEMENTE SU PROYECTO DE VIDA DE ACUERDO CON LAS CIRCUNSTANCIAS DEL CONTEXTO Y CON VISIÓN PROSPECTIVA.",
+                    "actividades": [
+                      "ACT. 1 Elaborar su proyecto de vida de acuerdo a las dimensiones humanas y a su perfil laboral        ACT. 2 Elaborar un plan estratégico a partir del reconocimiento de sus fortalezas y debilidades (Matriz DOFA), describiendo comportamientos y actitudes que regulan su forma de actuar asociado a las mejoras derivadas del Proyecto de vida",
+                    ]
+                  },
+                  {
+                    "ra": "ASUMIR ACTITUDES CRÍTICAS, ARGUMENTATIVAS Y PROPOSITIVAS EN FUNCIÓN DE LA RESOLUCIÓN DE PROBLEMAS DE CARÁCTER PRODUCTIVO Y SOCIAL",
+                    "actividades": [
+                      "ACT. 2 Aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
+                    ]
+                  },
+                ],
+                "hD": 1, "hI": 0
+              },
+            ]},
+          },
+          "ACTUAR": {
+            "MEJORA CONTINUA": {"competencias": [
+              {
+                "nombre": "CONTROLAR EL FLUJO DE MATERIALES Y DE INFORMACIÓN SEGÚN REQUERIMIENTOS DEL PROCESO PRODUCTIVO",
+                "resultados": [
+                  {
+                    "ra": "DISPONER EL MATERIAL SOBRANTE Y LOS DESECHOS DE ACUERDO CON LA NORMATIVIDAD VIGENTE",
+                    "actividades": [
+                      "Clasificar el material sobrante y los desechos de acuerdo con la normatividad vigente.",
+                    ]
+                  },
+                ],
+                "hD": 30, "hI": 0
+              },
+              {
+                "nombre": "PROGRAMAR LA PRODUCCIÓN SEGÚN PRODUCTO A FABRICAR Y PRIORIDADES ESTABLECIDAS",
+                "resultados": [
+                  {
+                    "ra": "APLICAR PLAN DE CONTINGENCIAS EN LA PROGRAMACIÓN DE LA PRODUCCIÓN DE ACUERDO CON CARACTERÍSTICAS DE LA SITUACIÓN PRESENTADA.",
+                    "actividades": [
+                      "Ejecutar medidas de contingencia dentro de la planificación de la producción",
+                    ]
+                  },
+                ],
+                "hD": 33, "hI": 0
+              },
+              {
+                "nombre": "IMPLEMENTAR HERRAMIENTAS DE OPTIMIZACIÓN DE RECURSOS PARA EL MEJORAMIENTO DE LOS PROCESOS",
+                "resultados": [
+                  {
+                    "ra": "ESTABLECER EL PLAN DE MEJORAMIENTO DE ACUERDO CON LA TÉCNICA DE OPTIMIZACIÓN QUE RESUELVE EL",
+                    "actividades": [
+                      "Elaborar  una propuesta de optimización a partir de un proceso productivo seleccionado.",
+                    ]
+                  },
+                  {
+                    "ra": "IMPLEMENTAR EL PLAN DE MEJORAMIENTO AL PROCESO PRODUCTIVO REAL PARA GARANTIZAR SU CUMPLIMIENTO, CONFIABILIDAD, TRAZABILIDAD Y CONTINUIDAD.",
+                    "actividades": [
+                      "Implementar herramientas de gestión para la optimización del proceso productivo.",
+                    ]
+                  },
+                ],
+                "hD": 30, "hI": 0
+              },
+              {
+                "nombre": "PROMOVER LA INTERACCIÓN IDÓNEA CONSIGO MISMO, CON LOS DEMÁS Y CON LA NATURALEZA EN LOS CONTEXTOS LABORAL Y SOCIAL",
+                "resultados": [
+                  {
+                    "ra": "ASUMIR RESPONSABLEMENTE LOS CRITERIOS DE PRESERVACIÓN Y CONSERVACIÓN DEL MEDIO AMBIENTE Y DE DESARROLLO SOSTENIBLE, EN EL EJERCICIO DE SU DESEMPEÑO LABORAL Y SOCIAL.",
+                    "actividades": [
+                      "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST)  relacionados  con la seguridad y salud en el trabajo de su programa de formacion.",
+                    ]
+                  },
+                ],
+                "hD": 1, "hI": 0
+              },
+            ]},
+          },
+        }
+      }
+    }
+  }
+
+}
+
+# ── PDF ───────────────────────────────────────────────────────────
+SENA_GREEN  = colors.HexColor('#006633')
+LIGHT_GREEN = colors.HexColor('#E8F5E9')
+GRAY_BORDER = colors.HexColor('#AAAAAA')
+BLACK       = colors.black
+
+def get_styles():
+    return {
+        'label':  ParagraphStyle('label',  fontName='Helvetica-Bold', fontSize=8,   alignment=TA_LEFT,   leading=10),
+        'value':  ParagraphStyle('value',  fontName='Helvetica',      fontSize=8,   alignment=TA_LEFT,   leading=10),
+        'cell':   ParagraphStyle('cell',   fontName='Helvetica',      fontSize=8,   alignment=TA_LEFT,   leading=10),
+        'cell_c': ParagraphStyle('cell_c', fontName='Helvetica',      fontSize=8,   alignment=TA_CENTER, leading=10),
+        'header': ParagraphStyle('header', fontName='Helvetica-Bold', fontSize=8,   alignment=TA_CENTER, leading=10),
+    }
+
+def get_logo_image():
+    """Devuelve un objeto Image de reportlab con el logo SENA, o None si no existe."""
+    for path in [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_sena.png"),
+        "logo_sena.png",
+    ]:
+        if os.path.exists(path):
+            return Image(path, width=1.8*cm, height=1.8*cm)
+    return None
+
+def build_page(aprendiz, resultados_sel, datos, styles):
+    # Cada RA numerado y separado con salto de línea entre ellos
+    ra_partes = []
+    for i, r in enumerate(resultados_sel):
+        ra_partes.append(f"<b>{i+1}.</b> {r["ra"]}")
+    ra_texto = "<br/><br/>".join(ra_partes)
+
+    actividades_todas = []
+    for r in resultados_sel:
+        actividades_todas.extend(r["actividades"])
+
+    fecha_plan = datos.get('fecha_plan', date.today().strftime("%d/%m/%Y"))
+
+    # ── ANCHO ÚNICO para TODAS las tablas ────────────────────────
+    # letter=21.59cm, márgenes 2x1.2cm → útil=19.19cm
+    # Usamos 19.1cm y borde uniforme 0.5pt en todas las tablas
+    W  = 19.1*cm
+    BX = 0.5          # grosor de borde unificado
+
+    estilo_base = [
+        ('BOX',   (0,0),(-1,-1), BX, BLACK),
+        ('GRID',  (0,0),(-1,-1), BX, GRAY_BORDER),
+        ('VALIGN',(0,0),(-1,-1), 'MIDDLE'),
+        ('TOPPADDING',   (0,0),(-1,-1), 4),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 4),
+        ('LEFTPADDING',  (0,0),(-1,-1), 4),
+    ]
+
+    # ── ENCABEZADO: logo + título + versión  (suman W) ───────────
+    # 2.3 + 15.3 + 1.5 = 19.1
+    logo_img  = get_logo_image()
+    logo_cell = logo_img if logo_img else Paragraph(
+        "<b>SENA</b>",
+        ParagraphStyle('lg', fontName='Helvetica-Bold', fontSize=16,
+                       alignment=TA_CENTER, textColor=SENA_GREEN))
+
+
+
+
+
+    # ── ENCABEZADO: logo + título + versión (suman W=19.1cm) ────────
+    # 2.3 + 15.3 + 1.5 = 19.1
+    header = Table([[
+        logo_cell,
+        Paragraph("<b>SERVICIO NACIONAL DE APRENDIZAJE SENA</b><br/>"
+                  "<b>CENTRO NACIONAL COLOMBO ALEMAN</b><br/>PLAN CONCERTADO",
+                  ParagraphStyle('hd', fontName='Helvetica-Bold', fontSize=8, alignment=TA_CENTER, leading=10)),
+        Paragraph("V2.0", ParagraphStyle('v2', fontName='Helvetica', fontSize=8, alignment=TA_LEFT, textColor=colors.gray)),
+    ]], colWidths=[2.3*cm, 15.3*cm, 1.5*cm])
+    header.setStyle(TableStyle(estilo_base + [
+        ('TOPPADDING',   (0,0),(-1,-1), 6),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+    ]))
+
+    # ── FILA 1: Programa / Instructor  (2.8+9.5+2.3+4.5=19.1) ────
+    sv = ParagraphStyle('sv', fontName='Helvetica',      fontSize=8, alignment=TA_LEFT, leading=10)
+    sl = ParagraphStyle('sl', fontName='Helvetica-Bold', fontSize=8, alignment=TA_LEFT, leading=10)
+
+    f1 = Table([[
+        Paragraph("<b>Programa de\nFormación:</b>", sl),
+        Paragraph(datos['programa'], sv),
+        Paragraph("<b>Instructor:</b>", sl),
+        Paragraph(datos['instructor'], sv),
+    ]], colWidths=[2.8*cm, 9.5*cm, 2.3*cm, 4.5*cm])
+    f1.setStyle(TableStyle(estilo_base + [
+        ('BACKGROUND',(0,0),(0,0), LIGHT_GREEN),
+        ('BACKGROUND',(2,0),(2,0), LIGHT_GREEN),
+    ]))
+
+    # ── FILA 2: Ficha / Proyecto / Fase  (suman W) ───────────────
+    # 2.0 + 2.3 + 2.3 + 7.5 + 2.0 + 3.0 = 19.1
+    f2 = Table([[
+        Paragraph("<b>Número de\nFicha:</b>", sl),
+        Paragraph(datos['ficha'], sv),
+        Paragraph("<b>Proyecto\nFormativo:</b>", sl),
+        Paragraph(datos['proyecto'], sv),
+        Paragraph("<b>Fase del\nProyecto:</b>", sl),
+        Paragraph(datos['fase'], sv),
+    ]], colWidths=[2.0*cm, 2.3*cm, 2.3*cm, 7.5*cm, 2.0*cm, 3.0*cm])
+    f2.setStyle(TableStyle(estilo_base + [
+        ('BACKGROUND',(0,0),(0,0), LIGHT_GREEN),
+        ('BACKGROUND',(2,0),(2,0), LIGHT_GREEN),
+        ('BACKGROUND',(4,0),(4,0), LIGHT_GREEN),
+    ]))
+
+    # ── FILA 3: Aprendiz / Doc / Observaciones  (suman W) ────────
+    # 2.8 + 6.8 + 2.8 + 6.7 = 19.1
+    f3 = Table([
+        [Paragraph("<b>Nombre del\nAprendiz:</b>", sl),
+         Paragraph(aprendiz['nombre'], sv),
+         Paragraph("<b>Observaciones:</b>", sl),
+         Paragraph(datos.get('observaciones',''), sv)],
+        [Paragraph("<b>Documento\nde Identidad:</b>", sl),
+         Paragraph(aprendiz['doc'], sv), '', ''],
+    ], colWidths=[2.8*cm, 6.8*cm, 2.8*cm, 6.7*cm])
+    f3.setStyle(TableStyle(estilo_base + [
+        ('BACKGROUND',(0,0),(0,1), LIGHT_GREEN),
+        ('BACKGROUND',(2,0),(2,0), LIGHT_GREEN),
+        ('SPAN',(2,0),(3,1)),
+    ]))
+
+    # ── TABLA DESCRIPTORES: columnas suman W = 19.1 cm ───────────
+    # RA(4.4) | N°(1.1) | Act(4.8) | Física(1.4) | Digital(1.4) | Concertada(1.9) | Final(1.9) | SI(1.1) | NO(1.1)
+    # 4.4 + 1.1 + 4.8 + 1.4 + 1.4 + 1.9 + 1.9 + 1.1 + 1.1 = 19.1
+    col_w = [4.4*cm, 1.1*cm, 4.8*cm, 1.4*cm, 1.4*cm, 1.9*cm, 1.9*cm, 1.1*cm, 1.1*cm]
+    # Verificación: sum = 19.1 ✓
+    NCOLS = len(col_w)
+    h = styles['header']
+    num_rows = len(actividades_todas)  # exactamente las que hay, sin filas vacías
+
+    # Fila 0: título "DESCRIPTORES..." en SPAN de todas las columnas
+    title_style = ParagraphStyle('dt', fontName='Helvetica-Bold', fontSize=8, alignment=TA_CENTER)
+    fila_titulo  = [Paragraph("<b>DESCRIPTORES PARA EL DESARROLLO DE LA RUTA DE APRENDIZAJE</b>", title_style)] + ['']*(NCOLS-1)
+    # Fila 1: encabezados superiores
+    fila_hdr1 = [
+        Paragraph("<b>Resultados de\nAprendizaje</b>",h),
+        Paragraph("<b>N°\nActiv.</b>",h),
+        Paragraph("<b>Actividades a desarrollar</b>",h),
+        Paragraph("<b>Forma de\nEntrega</b>",h), '',
+        Paragraph("<b>Fecha de entrega</b>",h), '',
+        Paragraph("<b>¿Entregó?</b>",h), '',
+    ]
+    # Fila 2: subencabezados
+    fila_hdr2 = ['','','',
+        Paragraph("<b>Física</b>",h), Paragraph("<b>Digital</b>",h),
+        Paragraph("<b>Concertada</b>",h), Paragraph("<b>Final</b>",h),
+        Paragraph("<b>SI</b>",h), Paragraph("<b>NO</b>",h),
+    ]
+
+    table_data = [fila_titulo, fila_hdr1, fila_hdr2]
+
+    for i in range(num_rows):
+        act = actividades_todas[i] if i < len(actividades_todas) else ""
+        # Determinar SI / NO y fecha final según entrega_map
+        entrega_info = datos.get('entrega_map', {}).get(aprendiz['nombre'], None)
+        if entrega_info is None:
+            cel_si    = Paragraph("", styles['cell_c'])
+            cel_no    = Paragraph("", styles['cell_c'])
+            fecha_fin = Paragraph("", styles['cell_c'])
+        elif isinstance(entrega_info, dict):
+            entrego   = entrega_info.get('entrego', True)
+            f_final   = entrega_info.get('fecha_final', '')
+            cel_si    = Paragraph("X", styles['cell_c']) if entrego else Paragraph("", styles['cell_c'])
+            cel_no    = Paragraph("", styles['cell_c']) if entrego else Paragraph("X", styles['cell_c'])
+            fecha_fin = Paragraph(f_final, styles['cell_c'])
+        else:
+            cel_si    = Paragraph("X", styles['cell_c']) if entrega_info else Paragraph("", styles['cell_c'])
+            cel_no    = Paragraph("", styles['cell_c']) if entrega_info else Paragraph("X", styles['cell_c'])
+            fecha_fin = Paragraph("", styles['cell_c'])
+        table_data.append([
+            Paragraph(ra_texto, styles['cell']) if i == 0 else '',
+            Paragraph(str(i+1), styles['cell_c']),
+            Paragraph(act, styles['cell']),
+            Paragraph("X", styles['cell_c']),
+            '',
+            Paragraph(fecha_plan, styles['cell_c']),
+            fecha_fin,
+            cel_si,
+            cel_no,
+        ])
+
+    DATA_START = 3
+    desc_table = Table(table_data, colWidths=col_w,
+                       rowHeights=None)
+    desc_table.setStyle(TableStyle([
+        ('BOX',  (0,0),(-1,-1), BX, BLACK),
+        ('GRID', (0,0),(-1,-1), BX, GRAY_BORDER),
+        ('VALIGN',(0,0),(-1,-1), 'MIDDLE'),
+        ('ALIGN', (0,0),(-1,-1), 'CENTER'),
+        ('ALIGN', (0,DATA_START),(0,-1), 'LEFT'),
+        ('ALIGN', (2,DATA_START),(2,-1), 'LEFT'),
+        ('VALIGN',(0,DATA_START),(0,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0),(-1,-1), 3),
+        ('TOPPADDING',  (0,0),(-1,-1), 3),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 3),
+        ('SPAN',(0,0),(-1,0)),
+        ('SPAN',(3,1),(4,1)),('SPAN',(5,1),(6,1)),('SPAN',(7,1),(8,1)),
+        ('SPAN',(0,DATA_START),(0,DATA_START+num_rows-1)),
+        ('BACKGROUND',(0,0),(-1,0), LIGHT_GREEN),
+        ('BACKGROUND',(0,1),(-1,2), LIGHT_GREEN),
+        ('FONTNAME',(0,0),(-1,2),'Helvetica-Bold'),
+        ('TEXTCOLOR',(3,DATA_START),(3,-1), SENA_GREEN),
+        ('FONTNAME', (3,DATA_START),(3,-1),'Helvetica-Bold'),
+        ('FONTSIZE', (3,DATA_START),(3,-1), 10),
+        # Fecha en fuente pequeña para que quepe en 1 línea
+        ('FONTSIZE', (5,DATA_START),(5,-1), 8),
+        ('FONTSIZE', (6,DATA_START),(6,-1), 8),
+        # SI en verde
+        ('TEXTCOLOR',(7,DATA_START),(7,-1), SENA_GREEN),
+        ('FONTNAME', (7,DATA_START),(7,-1),'Helvetica-Bold'),
+        ('FONTSIZE', (7,DATA_START),(7,-1), 10),
+        # NO en rojo
+        ('TEXTCOLOR',(8,DATA_START),(8,-1), colors.HexColor('#CC0000')),
+        ('FONTNAME', (8,DATA_START),(8,-1),'Helvetica-Bold'),
+        ('FONTSIZE', (8,DATA_START),(8,-1), 10),
+    ]))
+
+    return [header, Spacer(1,3), f1, f2, f3, Spacer(1,4), desc_table]
+
+
+def generar_pdf_bytes(aprendices, resultados_sel, datos):
+    """PDF único con todos los aprendices (una página por aprendiz)."""
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf,pagesize=letter,rightMargin=1.2*cm,leftMargin=1.2*cm,topMargin=1.2*cm,bottomMargin=1.2*cm)
+    styles = get_styles()
+    story = []
+    for i, ap in enumerate(aprendices):
+        story.extend(build_page(ap, resultados_sel, datos, styles))
+        if i < len(aprendices)-1:
+            story.append(PageBreak())
+    doc.build(story)
+    buf.seek(0)
+    return buf.getvalue()
+
+def generar_zip_bytes(aprendices, resultados_sel, datos):
+    """ZIP con un PDF individual por cada aprendiz."""
+    import zipfile, re
+    zip_buf = BytesIO()
+    styles = get_styles()
+    with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for ap in aprendices:
+            # PDF individual
+            buf = BytesIO()
+            doc = SimpleDocTemplate(buf, pagesize=letter,
+                                    rightMargin=1.2*cm, leftMargin=1.2*cm,
+                                    topMargin=1.2*cm,  bottomMargin=1.2*cm)
+            doc.build(build_page(ap, resultados_sel, datos, styles))
+            # Nombre de archivo limpio (sin caracteres especiales)
+            nombre_limpio = re.sub(r'[^\w\s-]', '', ap['nombre']).strip().replace(' ', '_')
+            filename = f"Plan_Concertado_{nombre_limpio}.pdf"
+            zf.writestr(filename, buf.getvalue())
+    zip_buf.seek(0)
+    return zip_buf.getvalue()
+
+def leer_aprendices(file):
+    """Lee aprendices de cualquier Excel (.xlsx o .xls).
+    - Detecta encabezados automaticamente
+    - Filtra solo EN FORMACION (si existe columna Estado)
+    - Elimina duplicados por numero de documento
+    - No requiere LibreOffice
+    """
+    import pandas as pd
+    from io import BytesIO as _BIO
+
+    nombre_archivo = getattr(file, 'name', '') or ''
+    contenido = file.read() if hasattr(file, 'read') else open(file,'rb').read()
+
+    ficha_detectada = None
+    codigo_programa_detectado = None
+
+    # Buscar ficha y código de programa en las primeras filas del archivo
+    try:
+        if nombre_archivo.lower().endswith('.xls'):
+            df_meta = pd.read_excel(_BIO(contenido), engine='xlrd', header=None, dtype=str, nrows=15)
+        else:
+            df_meta = pd.read_excel(_BIO(contenido), header=None, dtype=str, nrows=15)
+        for _, row in df_meta.iterrows():
+            row_vals = [str(v).strip() if v else '' for v in row]
+            row_lower = [v.lower() for v in row_vals]
+
+            # Buscar ficha
+            for i, v in enumerate(row_lower):
+                if 'ficha' in v:
+                    for vv in row_vals:
+                        candidate = vv.replace('.0','').strip()
+                        if candidate.isdigit() and len(candidate) >= 5:
+                            ficha_detectada = candidate
+                            break
+
+            # Buscar código del programa
+            for i, v in enumerate(row_lower):
+                if 'código' in v or 'codigo' in v or 'cógigo' in v:
+                    for vv in row_vals:
+                        candidate = vv.replace('.0','').strip()
+                        if candidate.isdigit() and len(candidate) >= 5:
+                            codigo_programa_detectado = candidate
+                            break
+
+            # También buscar en celdas que tengan el código directamente (ej: "821100")
+            if not codigo_programa_detectado:
+                for vv in row_vals:
+                    c = vv.replace('.0','').strip()
+                    if c.isdigit() and len(c) in (6,):
+                        # Verificar que sea un código de programa conocido
+                        codigo_programa_detectado = c
+                        break
+
+    except Exception:
+        pass
+
+    # Leer raw sin encabezado para buscar la fila correcta
+    try:
+        if nombre_archivo.lower().endswith('.xls'):
+            df_raw = pd.read_excel(_BIO(contenido), engine='xlrd', header=None, dtype=str)
+        else:
+            df_raw = pd.read_excel(_BIO(contenido), header=None, dtype=str)
+    except Exception as e:
+        try:
+            df_raw = pd.read_excel(_BIO(contenido), header=None, dtype=str)
+        except Exception:
+            return [], None, None
+
+    # Buscar fila de encabezados (la que contenga "nombre")
+    header_row = 0
+    for i, row in df_raw.iterrows():
+        vals = [str(v).strip().lower() for v in row]
+        if any('nombre' == v for v in vals) or any('nombre' in v for v in vals):
+            header_row = i
+            break
+
+    # Re-leer con encabezado correcto
+    try:
+        if nombre_archivo.lower().endswith('.xls'):
+            df = pd.read_excel(_BIO(contenido), engine='xlrd', header=header_row, dtype=str)
+        else:
+            df = pd.read_excel(_BIO(contenido), header=header_row, dtype=str)
+    except Exception:
+        return [], None, None
+
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    # Mapear columnas por nombre
+    def find_col(must_have, must_not=None):
+        for c in df.columns:
+            if all(k in c for k in must_have):
+                if must_not and any(e in c for e in must_not):
+                    continue
+                return c
+        return None
+
+    col_nombre   = find_col(['nombre'], must_not=['apellido'])
+    col_apellido = find_col(['apellido'])
+    col_tipo     = find_col(['tipo'])
+    col_num      = (find_col(['número', 'documento'], must_not=['tipo']) or
+                    find_col(['numero', 'documento'], must_not=['tipo']) or
+                    find_col(['documento'], must_not=['tipo']))
+    col_estado   = find_col(['estado'])
+
+    if col_nombre is None:
+        return [], None, None
+
+    aprendices = []
+    vistos = set()
+
+    for _, row in df.iterrows():
+        try:
+            nombre = str(row.get(col_nombre, '') or '').strip()
+            if not nombre or nombre.lower() in ('nan', 'nombre', ''):
+                continue
+
+            apellido = str(row.get(col_apellido, '') or '').strip() if col_apellido else ''
+            nombre_completo = f"{nombre} {apellido}".strip()
+
+            tipo_doc = str(row.get(col_tipo, 'CC') or 'CC').strip() if col_tipo else 'CC'
+            num_doc  = str(row.get(col_num, '') or '').strip()       if col_num  else ''
+            # Quitar decimal si viene como "1001234.0"
+            if num_doc.endswith('.0'):
+                num_doc = num_doc[:-2]
+
+            # Filtrar por estado si existe la columna
+            if col_estado:
+                estado = str(row.get(col_estado, '') or '').strip().upper()
+                if estado != 'EN FORMACION':
+                    continue
+
+            # Deduplicar por número de documento
+            clave = num_doc if num_doc else nombre_completo
+            if clave in vistos:
+                continue
+            vistos.add(clave)
+
+            aprendices.append({'nombre': nombre_completo, 'doc': f"{tipo_doc} {num_doc}".strip()})
+        except Exception:
+            continue
+
+    return aprendices, ficha_detectada, codigo_programa_detectado
+
+
+# ── INTERFAZ ──────────────────────────────────────────────────────
+col1, col2 = st.columns([1,1], gap="large")
+
+with col1:
+    # 1. Lista aprendices
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📋 1. Insertar Juicio Evaluativo</div>', unsafe_allow_html=True)
+    archivo = st.file_uploader("Reporte de Juicios Evaluativos (.xlsx / .xls)", type=["xlsx","xls"], label_visibility="collapsed")
+    aprendices = []
+    ficha_auto = None
+    programa_detectado = None
+    if archivo:
+        aprendices, ficha_auto, programa_detectado = leer_aprendices(archivo)
+        st.success(f"✅ {len(aprendices)} aprendices cargados")
+        if ficha_auto:
+            st.caption(f"📋 Ficha detectada: {ficha_auto}")
+        if programa_detectado:
+            st.caption(f"🎓 Programa detectado: {programa_detectado}")
+        chips = "".join([f'<span class="chip">{a["nombre"].split()[0]} {a["nombre"].split()[-1]}</span>' for a in aprendices[:8]])
+        if len(aprendices) > 8: chips += f'<span class="chip">+{len(aprendices)-8} más</span>'
+        st.markdown(chips, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 2. Instructor y grupo
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👤 2. Instructor y grupo</div>', unsafe_allow_html=True)
+    instructor_raw = st.text_input("Nombre del instructor", placeholder="Nombres y apellidos completos")
+    # Solo letras, espacios y tildes
+    import re as _re
+    instructor = _re.sub(r"[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]", "", instructor_raw).upper() if instructor_raw else ""
+    if instructor_raw and instructor != instructor_raw.upper():
+        st.caption("⚠️ Solo se permiten letras en el nombre del instructor.")
+
+    ficha_raw = st.text_input("Número de ficha", 
+        value=ficha_auto if ficha_auto else "",
+        placeholder="Ej. 2441890",
+        help="Se completó automáticamente desde el archivo. Puedes editarlo." if ficha_auto else "Escribe el número de ficha.")
+    # Solo números
+    ficha = _re.sub(r"[^0-9]", "", ficha_raw) if ficha_raw else ""
+    if ficha_raw and ficha != ficha_raw:
+        st.caption("⚠️ Solo se permiten números en el número de ficha.")
+    fecha_plan    = st.date_input("Fecha del Plan Concertado", value=date.today())
+    observaciones = st.text_area("Observaciones (opcional)", height=68)
+
+with col2:
+    # 3. Programa, proyecto y fase — con autodetección desde el archivo
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📚 3. Programa, proyecto y fase</div>', unsafe_allow_html=True)
+
+    # Autodetectar programa desde el código del archivo
+    programas_disponibles = list(CATALOGO.keys())
+    programa_auto_idx = 0  # índice 0 = "— Selecciona —"
+
+    if programa_detectado:
+        for i, prog in enumerate(programas_disponibles):
+            if programa_detectado in prog:
+                programa_auto_idx = i + 1  # +1 por el "— Selecciona —"
+                break
+
+    programa_sel = st.selectbox(
+        "Programa de formación",
+        ["— Selecciona —"] + programas_disponibles,
+        index=programa_auto_idx,
+        format_func=lambda x: x[:80]+"..." if len(x)>80 else x,
+        help="Detectado automáticamente desde el archivo." if programa_detectado and programa_auto_idx > 0 else ""
+    )
+
+    proyectos_disponibles = []
+    proyecto_data = None
+    fases_data = {}
+
+    if programa_sel != "— Selecciona —":
+        proyectos_disponibles = list(CATALOGO[programa_sel]["proyectos"].keys())
+
+        # Si solo hay 1 proyecto → seleccionar automáticamente
+        # Si hay más → mostrar solo los del programa detectado
+        if len(proyectos_disponibles) == 1:
+            proyecto_sel = proyectos_disponibles[0]
+            st.info(f"📋 Proyecto: {proyecto_sel[:80]}{'...' if len(proyecto_sel)>80 else ''}")
+        else:
+            proyecto_sel = st.selectbox(
+                "Proyecto formativo",
+                ["— Selecciona —"] + proyectos_disponibles,
+                format_func=lambda x: x[:80]+"..." if len(x)>80 else x
+            )
+
+        if proyecto_sel != "— Selecciona —":
+            proyecto_data = CATALOGO[programa_sel]["proyectos"][proyecto_sel]
+            fases_data    = proyecto_data["fases"]
+            fase_sel = st.selectbox("Fase del proyecto", ["— Selecciona —"] + list(fases_data.keys()))
+        else:
+            fase_sel = "— Selecciona —"
+    else:
+        if programa_detectado and programa_auto_idx == 0:
+            st.warning(f"⚠️ Programa '{programa_detectado}' no encontrado en el catálogo. Selecciona manualmente.")
+        proyecto_sel = "— Selecciona —"
+        fase_sel     = "— Selecciona —"
+
+    # Siempre inicializar antes de usarlas
+    actividad_sel   = "— Selecciona —"
+    competencia_sel = None
+
+    if fase_sel != "— Selecciona —" and fase_sel in fases_data:
+        acts = list(fases_data[fase_sel].keys())
+        actividad_sel = st.selectbox("Actividad de proyecto", ["— Selecciona —"] + acts,
+                                     format_func=lambda x: (x[:70]+"...") if len(x)>70 else x)
+
+    if actividad_sel != "— Selecciona —":
+        comps = fases_data[fase_sel][actividad_sel]["competencias"]
+        nombres_comp = [c["nombre"] for c in comps]
+        comp_nombre  = st.selectbox("Competencia", nombres_comp,
+                                    format_func=lambda x: (x[:75]+"...") if len(x)>75 else x)
+        competencia_sel = next(c for c in comps if c["nombre"] == comp_nombre)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 4. Resultados de aprendizaje
+    resultados_sel = []
+    if competencia_sel:
+        st.markdown('<div class="section-box">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">✅ 4. Resultados de aprendizaje</div>', unsafe_allow_html=True)
+        st.caption("Selecciona uno o más. Sus actividades se combinarán en el PDF.")
+        for i, r in enumerate(competencia_sel["resultados"]):
+            key = f"ra_{programa_sel[:10]}_{fase_sel[:10]}_{i}"
+            if st.checkbox(r["ra"], key=key):
+                resultados_sel.append(r)
+                with st.expander(f"📝 Actividades del resultado {i+1}", expanded=True):
+                    for j, act in enumerate(r["actividades"]):
+                        st.markdown(f"**{j+1}.** {act}")
+        if resultados_sel:
+            total_acts = sum(len(r["actividades"]) for r in resultados_sel)
+            st.info(f"✅ {len(resultados_sel)} resultado(s) → {total_acts} actividades en el PDF")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# ── SECCIÓN OPCIONAL: ¿Entregó? ───────────────────────────────────
+entrega_map = {}  # nombre → True(SI) / False(NO) / None(en blanco)
+if aprendices:
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📬 ¿Entregó la actividad? <span style="font-weight:400;color:#888;font-size:.8rem">(opcional)</span></div>', unsafe_allow_html=True)
+    st.caption("Si no lo completas, SI y NO quedan en blanco en el PDF.")
+
+    usar_entrega = st.toggle("Registrar entrega de actividades", value=False)
+    if usar_entrega:
+        marcar_todos = st.toggle("✅ Marcar todos como SI", value=True, key="todos_si")
+        # Fecha de cierre - no puede ser anterior a fecha concertada
+        fecha_cierre = st.date_input(
+            "📅 Fecha de cierre (aplica para todos los aprendices)",
+            value=fecha_plan,
+            min_value=fecha_plan,
+            help=f"No puede ser anterior a la fecha concertada ({fecha_plan.strftime('%d/%m/%Y')})"
+        )
+        st.markdown("---")
+        cols_hdr = st.columns([4, 1, 1])
+        cols_hdr[0].markdown("**Aprendiz**")
+        cols_hdr[1].markdown("**SI**")
+        cols_hdr[2].markdown("**NO**")
+        # Fecha de cierre única para todos (obligatoria)
+        fecha_cierre = st.date_input("📅 Fecha de cierre (se aplicará a todos los aprendices)", value=date.today())
+        st.markdown("---")
+        cols_hdr = st.columns([5, 2])
+        cols_hdr[0].markdown("**Aprendiz**")
+        cols_hdr[1].markdown("**¿Entregó?**")
+        for ap in aprendices:
+            cols = st.columns([5, 2])
+            cols[0].markdown(f"{ap['nombre']}")
+            respuesta = cols[1].radio("", ["SI", "NO"],
+                index=0 if marcar_todos else 0,
+                key=f"entrega_{ap['nombre']}",
+                horizontal=True,
+                label_visibility="collapsed")
+            entrega_map[ap['nombre']] = {
+                'entrego': (respuesta == "SI"),
+                'fecha_final': fecha_cierre.strftime("%d/%m/%Y")
+            }
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ── GENERAR ───────────────────────────────────────────────────────
+st.divider()
+col_btn, col_info = st.columns([2,3])
+with col_info:
+    if not archivo: st.info("⬆️ Carga la lista de aprendices para continuar.")
+    elif not instructor or not ficha: st.warning("Completa el nombre del instructor y número de ficha.")
+    elif programa_sel == "— Selecciona —" or proyecto_sel == "— Selecciona —": st.warning("Selecciona el programa y proyecto formativo.")
+    elif fase_sel == "— Selecciona —" or actividad_sel == "— Selecciona —": st.warning("Selecciona la fase y actividad del proyecto.")
+    elif not resultados_sel: st.warning("Selecciona al menos un resultado de aprendizaje.")
+    else:
+        total_acts = sum(len(r["actividades"]) for r in resultados_sel)
+        st.success(f"✅ Listo — {len(aprendices)} aprendices · {len(resultados_sel)} resultado(s) · {total_acts} actividades")
+
+with col_btn:
+    generar = st.button("🖨️ Generar Plan Concertado")
+
+if generar:
+    errores = []
+    if not archivo: errores.append("Carga la lista de aprendices.")
+    if not instructor: errores.append("Escribe el nombre del instructor.")
+    if not ficha: errores.append("Escribe el número de ficha.")
+    if programa_sel == "— Selecciona —": errores.append("Selecciona el programa de formación.")
+    if proyecto_sel == "— Selecciona —": errores.append("Selecciona el proyecto formativo.")
+    if fase_sel == "— Selecciona —" or actividad_sel == "— Selecciona —": errores.append("Selecciona fase y actividad.")
+    if not resultados_sel: errores.append("Selecciona al menos un resultado de aprendizaje.")
+    if errores:
+        for e in errores: st.error(e)
+    else:
+        with st.spinner(f"Generando {len(aprendices)} documentos..."):
+            datos = {
+                'programa':      "PRODUCCIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
+                'instructor':    instructor.upper(),
+                'ficha':         ficha,
+                'proyecto':      proyecto_data["nombre_completo"],
+                'fase':          fase_sel,
+                'observaciones': observaciones,
+                'fecha_plan':    fecha_plan.strftime("%d/%m/%Y"),
+                'entrega_map':   entrega_map,
+            }
+            zip_bytes = generar_zip_bytes(aprendices, resultados_sel, datos)
+            pdf_bytes = generar_pdf_bytes(aprendices, resultados_sel, datos)
+
+        st.success(f"✅ {len(aprendices)} documentos generados — elige cómo descargar:")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.download_button(
+                label=f"📦 Descargar ZIP ({len(aprendices)} PDFs individuales)",
+                data=zip_bytes,
+                file_name=f"PlanConcertado_Ficha_{ficha}.zip",
+                mime="application/zip",
+                use_container_width=True,
+            )
+        with c2:
+            st.download_button(
+                label=f"📄 Descargar PDF único ({len(aprendices)} páginas)",
+                data=pdf_bytes,
+                file_name=f"PlanConcertado_Ficha_{ficha}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
