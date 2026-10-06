@@ -3454,7 +3454,7 @@ def leer_aprendices(file):
 col1, col2 = st.columns([1,1], gap="large")
 
 with col1:
-    # 1. Lista aprendices
+    # 1. Insertar Juicio Evaluativo
     st.markdown('<div class="section-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📋 1. Insertar Juicio Evaluativo</div>', unsafe_allow_html=True)
     archivo = st.file_uploader("Reporte de Juicios Evaluativos (.xlsx / .xls)", type=["xlsx","xls"], label_visibility="collapsed")
@@ -3467,9 +3467,8 @@ with col1:
             st.success(f"✅ {len(aprendices)} aprendices cargados")
         if ficha_auto:
             st.caption(f"📋 Ficha detectada: {ficha_auto}")
-        # Selección de aprendices
         with st.expander(f"👥 Seleccionar aprendices ({len(aprendices)} cargados)", expanded=False):
-            st.caption("Todos incluidos por defecto. Desmarca los que NO quieres generar.")
+            st.caption("Todos incluidos. Desmarca los que NO quieres generar.")
             ca, cb = st.columns(2)
             if ca.button("✅ Marcar todos", key="marcar_todos_ap", use_container_width=True):
                 for ap in aprendices:
@@ -3486,26 +3485,27 @@ with col1:
     aprendices_sel = [ap for ap in aprendices if st.session_state.get(f"inc_{ap['nombre']}", True)] if aprendices else []
     if aprendices and len(aprendices_sel) < len(aprendices):
         st.warning(f"⚠️ {len(aprendices)-len(aprendices_sel)} excluido(s) · Se generarán {len(aprendices_sel)} documentos")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Solo letras, espacios y tildes
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👤 2. Instructor y grupo</div>', unsafe_allow_html=True)
+    instructor_raw = st.text_input("Nombre del instructor", placeholder="Nombres y apellidos completos")
     import re as _re
     instructor = _re.sub(r"[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]", "", instructor_raw).upper() if instructor_raw else ""
     if instructor_raw and instructor != instructor_raw.upper():
         st.caption("⚠️ Solo se permiten letras en el nombre del instructor.")
-
-    ficha_raw = st.text_input("Número de ficha", 
+    ficha_raw = st.text_input("Número de ficha",
         value=ficha_auto if ficha_auto else "",
         placeholder="Ej. 2441890",
-        help="Se completó automáticamente desde el archivo. Puedes editarlo." if ficha_auto else "Escribe el número de ficha.")
-    # Solo números
+        help="Se completó automáticamente." if ficha_auto else "Escribe el número de ficha.")
     ficha = _re.sub(r"[^0-9]", "", ficha_raw) if ficha_raw else ""
     if ficha_raw and ficha != ficha_raw:
         st.caption("⚠️ Solo se permiten números en el número de ficha.")
-    fecha_plan    = st.date_input("Fecha del Plan Concertado", value=date.today())
+    fecha_plan = st.date_input("Fecha del Plan Concertado", value=date.today())
     observaciones = st.text_area("Observaciones (opcional)", height=68)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    # 3. Programa, proyecto y fase — con autodetección desde el archivo
     st.markdown('<div class="section-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📚 3. Programa, proyecto y fase</div>', unsafe_allow_html=True)
 
