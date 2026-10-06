@@ -257,8 +257,7 @@ CATALOGO = {
         "fases": {
           "PLANEAR": {
             "PREPARAR LOS RECURSOS PARA REALIZAR LAS ACTIVIDADES SEGÚN EL PROGRAMA DE PRODUCCIÓN": {"competencias": [
-              {
-                "nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
+              {"nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
                 "resultados": [
                   {"ra": "Describir entorno legal, organizacional, tecnológico, económico, ambiental y competitivo de la empresa según el sector industrial  y económico al que pertenece.", "actividades": [
                     "Identificar los factores socioeconómicos, ambientales y legales que influyen en el sistema productivo de la organización.",
@@ -269,11 +268,9 @@ CATALOGO = {
                   {"ra": "Alistar recursos teniendo en cuenta las tareas de producción y procedimientos de seguridad y salud en el trabajo", "actividades": [
                     "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
                   ]},
-                ],
-                "hD": 20, "hI": 5
+                ], "hD": 20, "hI": 0
               },
-              {
-                "nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
+              {"nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
                 "resultados": [
                   {"ra": "DEFINIR LOS ELEMENTOS QUE INTEGRAN EL SISTEMA LOGÍSTICO DE LA ORGANIZACIÓN TENIENDO EN CUENTA FLUJO DE MATERIALES E INFORMACIÓN DEL PROCESO PRODUCTIVO.", "actividades": [
                     "Clasificar los elementos claves que hacen parte de un sistema logistico ideal teniendo en cuenta flujo de materiales e información del proceso productivo.",
@@ -281,32 +278,23 @@ CATALOGO = {
                   {"ra": "REALIZAR LA DOCUMENTACIÓN DE LAS ACTIVIDADES DEL SISTEMA LOGÍSTICO DE ACUERDO CON PROCEDIMIENTOS ESTABLECIDOS POR LA ORGANIZACIÓN.", "actividades": [
                     "Analizar los documentos requeridos en las actividades logisticas de un sistema productivo cualquiera.",
                   ]},
-                ],
-                "hD": 26, "hI": 6
+                ], "hD": 26, "hI": 0
               },
-              {
-                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+              {"nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
                 "resultados": [
                   {"ra": "DETERMINAR LAS VARIABLES DEL PROCESO PRODUCTIVO DEL PRODUCTO SEGÚN REQUERIMIENTOS DEL PROCESO DE PRODUCCIÓN", "actividades": [
                     "Identificar las diferentes variables de calidad y sus respectivas unidades de medición de acuerdo con los requerimientos del proceso",
                   ]},
-                ],
-                "hD": 35, "hI": 9
+                ], "hD": 35, "hI": 0
               },
-              {
-                "nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
+              {"nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
                 "resultados": [
-                  {"ra": "LEER TEXTOS MUY BREVES Y SENCILLOS EN INGLÉS GENERAL Y TÉCNICO", "actividades": [
-                    "GUIA TPM #3            Technical Vocabulary Discovery & Classification / Descubrimiento de Vocabulario Técnico y clasificación. Design a Production Plant – Latex Balloons / Diseña una planta de producción de Globos de latex. Inventory & Packaging Case Study / Estudio de caso de Inventario y Empaque Quality Audit Role-play at Sempertex / Simulación de Auditoría de Calidad en Sempertex",
+                  {"ra": ". Comprender la idea principal en avisos y mensajes breves, claros y sencillos en inglés técnico                                                                       -Leer textos muy breves y sencillos en inglés general y técnico                                                               -Comprender frases y vocabulario habitual sobre temas de interés personal y temas técnicos", "actividades": [
+                    "GUIA #1                                  3.3.1 Identificar vocabulario en inglés sobre Equipos de Protección Personal, vestimenta y partes del cuerpo para el desempeño del trabajo.  3.3.2 Fortalecer la comprensión lectora y la traducción de textos en inglés técnico vinculados al ámbito de seguridad laboral.  3.3.3 Desarrollar la capacidad de escribir textos en inglés en contextos laborales relacionados con el uso adecuado e importancia de los PPE. 3.3.4	Identificar vocabulario en inglés sobre los Equipos de Protección personal utilizados en el ámbito laboral. 3.3.5 Identificar conceptos sobre vestimenta general con sus sinónimos en inglés. 3.3.6 Identificar las partes del cuerpo en inglés que estén asociados a los EPP.3.3.7	Buscar todos los sinónimos en inglés del siguiente vocabulario de vestuario y de EPP.",
                   ]},
-                  {"ra": "COMPRENDER FRASES Y VOCABULARIO HABITUAL SOBRE TEMAS DE INTERÉS PERSONAL Y TEMAS TÉCNICOS", "actividades": [
-                    "Desarrollar actividades relacionadas con: COMPRENDER FRASES Y VOCABULARIO HABITUAL SOBRE TEMAS DE INTE",
-                  ]},
-                ],
-                "hD": 14, "hI": 3
+                ], "hD": 40, "hI": 0
               },
-              {
-                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+              {"nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
                 "resultados": [
                   {"ra": "24020150010 - Reconocer el rol de los participantes en el proceso formativo, el papel de los ambientes de aprendizaje y la metodología de formación, de acuerdo con la dinámica organizacional del SENA  24020150011 - Asumir los deberes y derechos con base en las leyes y la normativa institucional en el marco de su proyecto de vida.", "actividades": [
                     "ACT. 1  Identificar el rol de los participantes en el proceso formativo, según los  elemento  de la dinámica organizacional del SENA y  el Reglamento Interno de la Entidad como aprendiz",
@@ -323,69 +311,13 @@ CATALOGO = {
                     "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
                     "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
                   ]},
-                ],
-                "hD": 5, "hI": 1
-              },
-            ]},
-          },
-          "CONTROLAR": {
-            "PROPONER ACCIONES DE MEJORA NECESARIAS PARA EL FORTALECIMIENTO DE PROCESOS Y SERVICIOS": {"competencias": [
-              {
-                "nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
-                "resultados": [
-                  {"ra": "APOYAR EL CUMPLIMIENTO DE LAS METAS ESTABLECIDAS CON BASE EN LOS RESULTADOS DE LOS INDICADORES.", "actividades": [
-                    "Comprender la importancia de indicadores de gestión en un sistema productivo para el mejoramiento de procesos",
-                  ]},
-                  {"ra": "VERIFICAR EL CUMPLIMIENTO DE LOS PROTOCOLOS DE SEGURIDAD Y SALUD OCUPACIONAL APLICADOS AL DESARROLLO DE LAS ACTIVIDADES LOGÍSTICAS EN EL PROCESO PRODUCTIVO DE ACUERDO CON POLÍTICAS DE LA EMPRESA Y NORMATIVIDAD VIGENTE", "actividades": [
-                    "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
-                  ]},
-                  {"ra": "EJECUTAR TAREAS DE ALISTAMIENTO DE PEDIDOS CON BASE EN LOS REQUERIMIENTOS DEL PROCESO LOGÍSTICO DE LA EMPRESA", "actividades": [
-                    "Administrar los inventarios de materiales según los procedimientos de la organización  Reconocer los diferentes medios de transporte existentes para la distribución del producto.  Analizar las diferentes áreas de acción de selección y evaluación de proveedores teniendo en cuenta las características de adquisición de un producto y las normas establecidas en la empresa.   Aplicar  métodos de almacenaje  y conservación de materiales teniendo en cuenta características del producto.     Identificar y seleccionar el tipo de empaque y embalaje de acuerdo con las características del producto.",
-                  ]},
-                ],
-                "hD": 40, "hI": 10
-              },
-              {
-                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
-                "resultados": [
-                  {"ra": "INTERPRETAR LAS CARTAS DE CONTROL Y EL COMPORTAMIENTO ESTADÍSTICO DE LOS DATOS DE LAS VARIABLES DE ACUERDO CON LOS RANGOS ESTABLECIDOS.", "actividades": [
-                    "Interpretar las cartas de control de variables del proceso productivo, aplicando herramientas estadísticas de control de calidad, para la identificación del comportamiento del proceso y la determinación de si se encuentra bajo control estadístico",
-                  ]},
-                ],
-                "hD": 35, "hI": 9
-              },
-              {
-                "nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
-                "resultados": [
-                  {"ra": "COMUNICARSE EN TAREAS SENCILLAS Y HABITUALES QUE REQUIEREN UN INTERCAMBIO SIMPLE Y DIRECTO DE INFORMACIÓN COTIDIANA Y TÉCNICA", "actividades": [
-                    "GUIA PPE #1                        Safety Toolbox talks. Vocabulary Personal Protective Equipments.",
-                  ]},
-                  {"ra": "REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON UN VOCABULARIO SUFICIENTE PARA HACER UNA EXPOSICIÓN O MANTENER UNA CONVERSACIÓN SENCILLA SOBRE TEMAS TÉCNICOS", "actividades": [
-                    "GUIA PPE #1                      PPE Concepts.                    Define in English what body parts are associated with PPE.                                           Find the synonym in English of the following words.",
-                  ]},
-                ],
-                "hD": 24, "hI": 6
-              },
-              {
-                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
-                "resultados": [
-                  {"ra": "24020150003 - Generar procesos autónomos y de trabajo colaborativo permanentes, fortaleciendo el equilibrio de los componentes racionales y emocionales orientados hacia el Desarrollo Humano Integral.  24020150005 - Desarrollar procesos comunicativos eficaces y asertivos dentro de criterios de racionalidad que posibiliten la convivencia, el establecimiento de acuerdos, la construcción colectiva del conocimiento y la resolución de problemas de carácter productivo y social", "actividades": [
-                    "ACT. 1 demostrar la comprensión y aplicación de los conceptos de trabajo en equipo mediante la participación en una actividad grupal, aplicando principios de comunicación, cooperación y respeto mutuo.",
-                    "ACT. 2 aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
-                  ]},
-                  {"ra": "24020150008 - Aplicar técnicas de cultura física para el mejoramiento de su expresión corporal, desempeño laboral según la naturaleza y complejidad del área ocupacional.", "actividades": [
-                    "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
-                    "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
-                  ]},
-                ],
-                "hD": 5, "hI": 1
+                ], "hD": 5, "hI": 0
               },
             ]},
           },
           "EJECUTAR": {
             "DESARROLLAR LAS ACTIVIDADES DE LOS PROCESOS PRODUCTIVOS Y DE SERVICIOS": {"competencias": [
-              {
-                "nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
+              {"nombre": "ORGANIZACIÓN DE LAS ACTIVIDADES DE PRODUCCIÓN.",
                 "resultados": [
                   {"ra": "DETERMINAR TAREAS DE PRODUCCIÓN DE ACUERDO CON EL PROGRAMA DE PRODUCCIÓN.", "actividades": [
                     "Analizar las diferentes distribuciones de plantas físicas teniendo en cuenta sus características según su producción  Comprender los principios básicos de Lean Manufacturing utilizados en la mejora continua en el área de producción",
@@ -396,11 +328,9 @@ CATALOGO = {
                   {"ra": "SEGUIR EL PLAN DE EMERGENCIA Y CONTINGENCIA, TENIENDO EN CUENTA EL PROCEDIMIENTO ESTABLECIDO POR LA ORGANIZACIÓN.", "actividades": [
                     "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
                   ]},
-                ],
-                "hD": 26, "hI": 7
+                ], "hD": 26, "hI": 0
               },
-              {
-                "nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+              {"nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
                 "resultados": [
                   {"ra": "REALIZAR MEDICIONES DE VARIABLES DE PROCESO Y DE PRODUCTO TENIENDO EN CUENTA LOS PROCEDIMIENTOS ESTABLECIDOS", "actividades": [
                     "Realizar las mediciones de las variables",
@@ -408,23 +338,19 @@ CATALOGO = {
                   {"ra": "CONTROLAR LAS VARIABLES DEL PROCESO Y DEL PRODUCTO CON BASE EN TÉCNICAS ESTABLECIDAS, SET UP Y NORMATIVIDAD VIGENTE.", "actividades": [
                     "Identificar los diferentes Ensayos y Pruebas de materiales teniendo en cuenta las características del producto  Reconocer la importancia de la estadística en la vida diaria a partir de situaciones cotidianas",
                   ]},
-                ],
-                "hD": 35, "hI": 9
+                ], "hD": 35, "hI": 0
               },
-              {
-                "nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
+              {"nombre": "COMPRENDER TEXTOS EN INGLÉS EN FORMA ESCRITA Y AUDITIVA",
                 "resultados": [
                   {"ra": "ENCONTRAR INFORMACIÓN ESPECÍFICA Y PREDECIBLE EN ESCRITOS SENCILLOS Y COTIDIANOS", "actividades": [
-                    "GUIA TPM #2                  Identificar la importancia de las medidas de seguridad en los procesos de manufactura usando los adverbios de frecuencia.  Reconocer una materia prima para la elaboración de un producto usando los adverbios de frecuencia. (Globos de latex). Identificar los equipos, herramientas, EPP de los procesos de manufactura usando el There is / There are.",
+                    "GUIA #2                                         3.3.1 Reconocer los adverbios de frecuencia en el contexto de procesos de y la actitud en el trabajo.  3.3.2 Usar adverbios de frecuencia en los distintos tipos de Procesos de Manufactura. 3.3.3 Aplicar correctamente There is / There are para mencionar los equipos, herramientas y elementos de seguridad necesarios en los procesos de manufactura.3.3.4 Expresar diferencias con adjetivos comparativos en inglés entre distintos elementos de control de calidad en Procesos de Manufactura.3.3.5   Comprender textos en inglés, respondiendo preguntas que integren el vocabulario y estructuras gramaticales estudiadas.3.3.6 Aplicar los adverbios de frecuencia y los adjetivos comparativos en inglés para desarrollar acciones de mejoras en un caso ficiticio. 3.3.7 Aplicar vocabulario y temáticas vistas en inglés de un texto sobre la calidad de los procesos de manufactura. 3.3.8 Aplicar correctamente las estructuras gramaticales There is / There are y Adverbs of Frequency, comparatives adjectives.",
                   ]},
                   {"ra": "ENCONTRAR VOCABULARIO Y EXPRESIONES DE INGLÉS TÉCNICO EN ANUNCIOS, FOLLETOS, PÁGINAS WEB, ETC", "actividades": [
-                    "GUIA TPM #2               Socializar los diferentes aspectos de control de calidad en los procesos de manufactura usando los adjetivos comparativos. Descripcion de PRO Y CONTRAS de procesos de manufactura utilizando el vocabulario adecuado en inglés y aplicando las temáticas vistas. Desarrollar acciones de mejoras en los procesos de manufactura usando las temáticas vistas. Manufacturing Process Improvement Evaluation Table (with Frequency Adverbs and Comparatives)Aplicar vocabulario y temáticas vistas en un texto escrito.",
+                    "Desarrollar actividades relacionadas con: ENCONTRAR VOCABULARIO Y EXPRESIONES DE INGLÉS TÉCNICO EN ANU",
                   ]},
-                ],
-                "hD": 21, "hI": 5
+                ], "hD": 40, "hI": 0
               },
-              {
-                "nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+              {"nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
                 "resultados": [
                   {"ra": "24020150006 -  Asumir responsablemente los criterios de preservación y conservación del Medio Ambiente y de Desarrollo Sostenible, en el ejercicio de su desempeño laboral y social.  24020150007 - Generar hábitos saludables en su estilo de vida para garantizar la prevención de riesgos ocupacionales de acuerdo con el diagnóstico de su condición física individual y la naturaleza y complejidad de su desempeño laboral.", "actividades": [
                     "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
@@ -434,8 +360,53 @@ CATALOGO = {
                     "ACT. 1 analizar situaciones reales y simuladas donde se presenten conflictos de valores, proponiendo soluciones que se basen en principios éticos universales.",
                     "ACT. 2  Construir proyecto de vida, aplicando principios de autoconocimiento y proyección personal",
                   ]},
-                ],
-                "hD": 5, "hI": 1
+                ], "hD": 5, "hI": 0
+              },
+            ]},
+          },
+          "CONTROLAR": {
+            "PROPONER ACCIONES DE MEJORA NECESARIAS PARA EL FORTALECIMIENTO DE PROCESOS Y SERVICIOS": {"competencias": [
+              {"nombre": "REGULACIÓN DEL FLUJO DE RECURSOS EN LA PLANTA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "APOYAR EL CUMPLIMIENTO DE LAS METAS ESTABLECIDAS CON BASE EN LOS RESULTADOS DE LOS INDICADORES.", "actividades": [
+                    "Comprender la importancia de indicadores de gestión en un sistema productivo para el mejoramiento de procesos",
+                  ]},
+                  {"ra": "VERIFICAR EL CUMPLIMIENTO DE LOS PROTOCOLOS DE SEGURIDAD Y SALUD OCUPACIONAL APLICADOS AL DESARROLLO DE LAS ACTIVIDADES LOGÍSTICAS EN EL PROCESO PRODUCTIVO DE ACUERDO CON POLÍTICAS DE LA EMPRESA Y NORMATIVIDAD VIGENTE", "actividades": [
+                    "- Relacionar los factores de riesgo que permiten identificar áreas con mayor riesgo para la salud del recurso humano  - Evaluar el cumplimiento de la normativa relacionada con Seguridad y salud ocupacional en las actividades logísticas dentro de un sistema productivo",
+                  ]},
+                  {"ra": "EJECUTAR TAREAS DE ALISTAMIENTO DE PEDIDOS CON BASE EN LOS REQUERIMIENTOS DEL PROCESO LOGÍSTICO DE LA EMPRESA", "actividades": [
+                    "Administrar los inventarios de materiales según los procedimientos de la organización  Reconocer los diferentes medios de transporte existentes para la distribución del producto.  Analizar las diferentes áreas de acción de selección y evaluación de proveedores teniendo en cuenta las características de adquisición de un producto y las normas establecidas en la empresa.   Aplicar  métodos de almacenaje  y conservación de materiales teniendo en cuenta características del producto.     Identificar y seleccionar el tipo de empaque y embalaje de acuerdo con las características del producto.",
+                  ]},
+                ], "hD": 40, "hI": 0
+              },
+              {"nombre": "IMPLEMENTACIÓN DEL PLAN DE CALIDAD EN EL ÁREA DE PRODUCCIÓN.",
+                "resultados": [
+                  {"ra": "INTERPRETAR LAS CARTAS DE CONTROL Y EL COMPORTAMIENTO ESTADÍSTICO DE LOS DATOS DE LAS VARIABLES DE ACUERDO CON LOS RANGOS ESTABLECIDOS.", "actividades": [
+                    "Interpretar las cartas de control de variables del proceso productivo, aplicando herramientas estadísticas de control de calidad, para la identificación del comportamiento del proceso y la determinación de si se encuentra bajo control estadístico.",
+                  ]},
+                ], "hD": 35, "hI": 0
+              },
+              {"nombre": "COMPRENDER TEXTOS EN INGLES EN FORMA ESCRITA Y AUDITIVA",
+                "resultados": [
+                  {"ra": "COMUNICARSE EN TAREAS SENCILLAS Y HABITUALES QUE REQUIEREN UN INTERCAMBIO SIMPLE Y DIRECTO DE INFORMACIÓN COTIDIANA Y TÉCNICA", "actividades": [
+                    "GUIA #3                      3.3.1 Identificar Vocabulario técnico en inglés de Procesos de Manufactura. 3.3.2 Aplicar vocabulario técnico y temáticas vistas en inglés para diseñar una planta de producción. 3.3.3 Aplicar vocabualrio técnico en inglés al área de Inventario y Empaque utilizando WH Questions, when, where, why, how, presente simple y presente Progresivo. 3.3.4 Realizar Role Play para la simulación de una auditoría de calidad haciendo uso de: Modals for hability: can/can´t, Modals for permission and request: can/could.3.3.5 Evaluar el reconocimiento, comprensión y uso contextual básico del vocabulario técnico en inglés relacionado con procesos de manufactura.",
+                  ]},
+                  {"ra": "REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON UN VOCABULARIO SUFICIENTE PARA HACER UNA EXPOSICIÓN O MANTENER UNA CONVERSACIÓN SENCILLA SOBRE TEMAS TÉCNICOS", "actividades": [
+                    "Desarrollar actividades relacionadas con: REALIZAR INTERCAMBIOS SOCIALES Y PRÁCTICOS MUY BREVES, CON U",
+                  ]},
+                ], "hD": 40, "hI": 0
+              },
+              {"nombre": "Promover la interacción de los aprendices consigo mismo, con los demás y con la naturaleza en los contextos laboral y social",
+                "resultados": [
+                  {"ra": "24020150003 - Generar procesos autónomos y de trabajo colaborativo permanentes, fortaleciendo el equilibrio de los componentes racionales y emocionales orientados hacia el Desarrollo Humano Integral.  24020150005 - Desarrollar procesos comunicativos eficaces y asertivos dentro de criterios de racionalidad que posibiliten la convivencia, el establecimiento de acuerdos, la construcción colectiva del conocimiento y la resolución de problemas de carácter productivo y social", "actividades": [
+                    "ACT. 1 demostrar la comprensión y aplicación de los conceptos de trabajo en equipo mediante la participación en una actividad grupal, aplicando principios de comunicación, cooperación y respeto mutuo.",
+                    "ACT. 2 aplicar técnicas de resolución de conflictos en situaciones del contexto productivo y social teniendo en cuenta pautas de negociación",
+                  ]},
+                  {"ra": "24020150008 - Aplicar técnicas de cultura física para el mejoramiento de su expresión corporal, desempeño laboral según la naturaleza y complejidad del área ocupacional.", "actividades": [
+                    "ACT. 1 Identificar los peligros y valoración de los riesgos de seguridad y salud en el trabajo (SST) teniendo en cuenta las actividades relacionadas con su área de desempeño del   programa de formación.",
+                    "ACT. 2  Realizar test de higiene postural https://es.educaplay.com/recursos-educativos/1467660-ergonomia_e_higiene_postural.html, segun marco legal de la Seguridad y Salud en el Trabajo (SST).",
+                  ]},
+                ], "hD": 5, "hI": 0
               },
             ]},
           },
