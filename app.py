@@ -3463,20 +3463,30 @@ with col1:
     programa_detectado = None
     if archivo:
         aprendices, ficha_auto, programa_detectado = leer_aprendices(archivo)
-        st.success(f"✅ {len(aprendices)} aprendices cargados")
+        if aprendices:
+            st.success(f"✅ {len(aprendices)} aprendices cargados")
         if ficha_auto:
             st.caption(f"📋 Ficha detectada: {ficha_auto}")
-        if programa_detectado:
-            st.caption(f"🎓 Programa detectado: {programa_detectado}")
-        chips = "".join([f'<span class="chip">{a["nombre"].split()[0]} {a["nombre"].split()[-1]}</span>' for a in aprendices[:8]])
-        if len(aprendices) > 8: chips += f'<span class="chip">+{len(aprendices)-8} más</span>'
-        st.markdown(chips, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        # Selección de aprendices
+        with st.expander(f"👥 Seleccionar aprendices ({len(aprendices)} cargados)", expanded=False):
+            st.caption("Todos incluidos por defecto. Desmarca los que NO quieres generar.")
+            ca, cb = st.columns(2)
+            if ca.button("✅ Marcar todos", key="marcar_todos_ap", use_container_width=True):
+                for ap in aprendices:
+                    st.session_state[f"inc_{ap['nombre']}"] = True
+            if cb.button("☐ Desmarcar todos", key="desmarcar_todos_ap", use_container_width=True):
+                for ap in aprendices:
+                    st.session_state[f"inc_{ap['nombre']}"] = False
+            st.divider()
+            for ap in aprendices:
+                key = f"inc_{ap['nombre']}"
+                if key not in st.session_state:
+                    st.session_state[key] = True
+                st.checkbox(ap['nombre'], value=st.session_state[key], key=key)
+    aprendices_sel = [ap for ap in aprendices if st.session_state.get(f"inc_{ap['nombre']}", True)] if aprendices else []
+    if aprendices and len(aprendices_sel) < len(aprendices):
+        st.warning(f"⚠️ {len(aprendices)-len(aprendices_sel)} excluido(s) · Se generarán {len(aprendices_sel)} documentos")
 
-    # 2. Instructor y grupo
-    st.markdown('<div class="section-box">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">👤 2. Instructor y grupo</div>', unsafe_allow_html=True)
-    instructor_raw = st.text_input("Nombre del instructor", placeholder="Nombres y apellidos completos")
     # Solo letras, espacios y tildes
     import re as _re
     instructor = _re.sub(r"[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]", "", instructor_raw).upper() if instructor_raw else ""
@@ -3654,7 +3664,7 @@ if generar:
     if errores:
         for e in errores: st.error(e)
     else:
-        with st.spinner(f"Generando {len(aprendices)} documentos..."):
+        with st.spinner(f"Generando {len(aprendices_sel)} documentos..."):
             datos = {
                 'programa':      "PRODUCCIÓN DE COMPONENTES MECÁNICOS CON MÁQUINAS DE CONTROL NUMÉRICO COMPUTARIZADO",
                 'instructor':    instructor.upper(),
@@ -3665,10 +3675,10 @@ if generar:
                 'fecha_plan':    fecha_plan.strftime("%d/%m/%Y"),
                 'entrega_map':   entrega_map,
             }
-            zip_bytes = generar_zip_bytes(aprendices, resultados_sel, datos)
-            pdf_bytes = generar_pdf_bytes(aprendices, resultados_sel, datos)
+            zip_bytes = generar_zip_bytes(aprendices_sel, resultados_sel, datos)
+            pdf_bytes = generar_pdf_bytes(aprendices_sel, resultados_sel, datos)
 
-        st.success(f"✅ {len(aprendices)} documentos generados — elige cómo descargar:")
+        st.success(f"✅ {len(aprendices_sel)} documentos generados — elige cómo descargar:")
 
         c1, c2 = st.columns(2)
         with c1:
