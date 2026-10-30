@@ -3595,45 +3595,37 @@ with col2:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ── SECCIÓN OPCIONAL: ¿Entregó? ───────────────────────────────────
-entrega_map = {}  # nombre → True(SI) / False(NO) / None(en blanco)
+entrega_map = {}
 if aprendices:
     st.markdown('<div class="section-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">📬 ¿Entregó la actividad? <span style="font-weight:400;color:#888;font-size:.8rem">(opcional)</span></div>', unsafe_allow_html=True)
-    st.caption("Si no lo completas, SI y NO quedan en blanco en el PDF.")
-
+    st.caption("Si no lo completas, SI y NO quedan en blanco en el PDF. Con «Excluir» no se genera plan para ese aprendiz.")
     usar_entrega = st.toggle("Registrar entrega de actividades", value=False)
     if usar_entrega:
-        marcar_todos = st.toggle("✅ Marcar todos como SI", value=True, key="todos_si")
-        # Fecha de cierre - no puede ser anterior a fecha concertada
         fecha_cierre = st.date_input(
             "📅 Fecha de cierre (aplica para todos los aprendices)",
-            value=fecha_plan,
-            min_value=fecha_plan,
-            help=f"No puede ser anterior a la fecha concertada ({fecha_plan.strftime('%d/%m/%Y')})"
-        )
+            value=fecha_plan, min_value=fecha_plan,
+            help=f"No puede ser anterior a la fecha concertada ({fecha_plan.strftime('%d/%m/%Y')})")
         st.markdown("---")
-        cols_hdr = st.columns([4, 1, 1])
-        cols_hdr[0].markdown("**Aprendiz**")
-        cols_hdr[1].markdown("**SI**")
-        cols_hdr[2].markdown("**NO**")
-        # Fecha de cierre única para todos (obligatoria)
-        fecha_cierre = st.date_input("📅 Fecha de cierre (se aplicará a todos los aprendices)", value=date.today())
-        st.markdown("---")
-        cols_hdr = st.columns([5, 2])
+        cols_hdr = st.columns([5, 3])
         cols_hdr[0].markdown("**Aprendiz**")
         cols_hdr[1].markdown("**¿Entregó?**")
+        excluidos_entrega = []
         for ap in aprendices:
-            cols = st.columns([5, 2])
-            cols[0].markdown(f"{ap['nombre']}")
-            respuesta = cols[1].radio("", ["SI", "NO"],
-                index=0 if marcar_todos else 0,
-                key=f"entrega_{ap['nombre']}",
-                horizontal=True,
+            cols = st.columns([5, 3])
+            cols[0].markdown(ap['nombre'])
+            respuesta = cols[1].radio("", ["SI", "NO", "Excluir"], index=0,
+                key=f"entrega_{ap['nombre']}", horizontal=True,
                 label_visibility="collapsed")
-            entrega_map[ap['nombre']] = {
-                'entrego': (respuesta == "SI"),
-                'fecha_final': fecha_cierre.strftime("%d/%m/%Y")
-            }
+            if respuesta == "Excluir":
+                excluidos_entrega.append(ap['nombre'])
+            else:
+                entrega_map[ap['nombre']] = {
+                    'entrego': (respuesta == "SI"),
+                    'fecha_final': fecha_cierre.strftime("%d/%m/%Y")}
+        if excluidos_entrega:
+            aprendices_sel = [ap for ap in aprendices_sel if ap['nombre'] not in excluidos_entrega]
+            st.info(f"🚫 {len(excluidos_entrega)} excluido(s) — no se generará su plan concertado. Se generarán {len(aprendices_sel)}.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ── GENERAR ───────────────────────────────────────────────────────
@@ -3647,7 +3639,7 @@ with col_info:
     elif not resultados_sel: st.warning("Selecciona al menos un resultado de aprendizaje.")
     else:
         total_acts = sum(len(r["actividades"]) for r in resultados_sel)
-        st.success(f"✅ Listo — {len(aprendices)} aprendices · {len(resultados_sel)} resultado(s) · {total_acts} actividades")
+        st.success(f"✅ Listo — {len(aprendices_sel)} aprendices · {len(resultados_sel)} resultado(s) · {total_acts} actividades")
 
 with col_btn:
     generar = st.button("🖨️ Generar Plan Concertado")
@@ -3655,6 +3647,7 @@ with col_btn:
 if generar:
     errores = []
     if not archivo: errores.append("Carga la lista de aprendices.")
+    if archivo and not aprendices_sel: errores.append("No hay aprendices para generar (todos excluidos).")
     if not instructor: errores.append("Escribe el nombre del instructor.")
     if not ficha: errores.append("Escribe el número de ficha.")
     if programa_sel == "— Selecciona —": errores.append("Selecciona el programa de formación.")
